@@ -6,7 +6,7 @@ def make_letter():
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
         client_id="e79acc16b5884a6088adac46a61fc8f0",
         client_secret="72dcf2a487e64c46ab32b543b015a46f",
-        redirect_uri="https://example.com/callback",
+        redirect_uri="https://music-cat-7r71.onrender.com",
         scope="user-read-recently-played"
     ))
 
