@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from spotipy.oauth2 import SpotifyOAuth
 import spotipy
 import os
 
 app = FastAPI()
+user_tokens = {}
 
 # Spotify API 用の設定
 CLIENT_ID = "e79acc16b5884a6088adac46a61fc8f0"
@@ -24,35 +26,40 @@ sp_oauth = SpotifyOAuth(
 def root():
     return {"message": "Hello Spotify App!"}
 
-# ① 認証URLを発行する
-@app.get("/login")
-def login():
-    auth_url = sp_oauth.get_authorize_url()
-    return RedirectResponse(auth_url)
-
-# ② Spotifyから返されるcodeを受け取ってアクセストークンに交換
 @app.get("/callback")
 def callback(request: Request):
     code = request.query_params.get("code")
-    if code is None:
-        return {"error": "No code provided"}
+    if not code:
+        return JSONResponse({"error": "No code provided"}, status_code=400)
 
     token_info = sp_oauth.get_access_token(code)
+
+    # 🎯 refresh_token を保存
+    user_tokens["refresh_token"] = token_info["refresh_token"]
+    user_tokens["access_token"] = token_info["access_token"]
+
+    return {"status": "authorized"}
+
+@app.get("/recent")
+def recent_tracks():
+    if "refresh_token" not in user_tokens:
+        return JSONResponse({"error": "User not authenticated"}, status_code=401)
+
+    # 🎯 必要に応じてアクセストークンをリフレッシュ
+    token_info = sp_oauth.refresh_access_token(user_tokens["refresh_token"])
     access_token = token_info["access_token"]
-    refresh_token = token_info["refresh_token"]
+    user_tokens["access_token"] = access_token
 
-    # APIアクセス確認用にユーザー情報を取得
     sp = spotipy.Spotify(auth=access_token)
-    user_profile = sp.current_user()
+    results = sp.current_user_recently_played(limit=10)
 
-    # ユーザーの音楽情報を取得
-    top_tracks = sp.current_user_top_tracks(limit=10)
-    top_artists = sp.current_user_top_artists(limit=10)
+    tracks = [
+        {
+            "name": item["track"]["name"],
+            "artist": item["track"]["artists"][0]["name"],
+            "played_at": item["played_at"]
+        }
+        for item in results["items"]
+    ]
 
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "user_profile": user_profile,
-        "top_tracks": top_tracks,
-        "top_artists": top_artists
-    }
+    return {"tracks": tracks}
