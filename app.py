@@ -11,7 +11,7 @@ CLIENT_ID = "e79acc16b5884a6088adac46a61fc8f0"
 CLIENT_SECRET = "72dcf2a487e64c46ab32b543b015a46f"
 REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
 
-SCOPE = "user-read-email user-read-recently-played"
+SCOPE = "user-read-email user-read-recently-played user-top-read"
 
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
@@ -45,8 +45,14 @@ def callback(request: Request):
     sp = spotipy.Spotify(auth=access_token)
     user_profile = sp.current_user()
 
+    # ユーザーの音楽情報を取得
+    top_tracks = sp.current_user_top_tracks(limit=10)
+    top_artists = sp.current_user_top_artists(limit=10)
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "user_profile": user_profile
+        "user_profile": user_profile,
+        "top_tracks": top_tracks,
+        "top_artists": top_artists
     }
