@@ -26,6 +26,11 @@ sp_oauth = SpotifyOAuth(
 def root():
     return {"message": "Hello Spotify App!"}
 
+@app.get("/login")
+def login():
+    auth_url = sp_oauth.get_authorize_url()
+    return RedirectResponse(auth_url)
+
 @app.get("/callback")
 def callback(request: Request):
     code = request.query_params.get("code")
