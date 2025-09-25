@@ -65,9 +65,9 @@ def recent_tracks():
         {
             "name": item["track"]["name"],
             "image": item["track"]["album"]["images"][0]["url"],
-            "genre": item["track"]["album"]["genres"][0] if item["track"]["album"]["genres"] else None,
-            "popularity": item["track"]["popularity"],
-            "release_date": item["track"]["album"]["release_date"]
+            #"genre": item["track"]["album"]["genres"][0] if item["track"]["album"]["genres"] else None,
+            #"popularity": item["track"]["popularity"],
+            #"release_date": item["track"]["album"]["release_date"]
         }
         for item in recently_played["items"]
     ]
