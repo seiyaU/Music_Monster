@@ -48,7 +48,8 @@ def callback(request: Request):
 @app.get("/recent")
 def recent_tracks():
     if "refresh_token" not in user_tokens:
-        return JSONResponse({"error": "User not authenticated"}, status_code=401)
+        #return JSONResponse({"error": "User not authenticated"}, status_code=401)
+        return RedirectResponse(url="/login")
 
     # 🎯 必要に応じてアクセストークンをリフレッシュ
     token_info = sp_oauth.refresh_access_token(user_tokens["refresh_token"])
