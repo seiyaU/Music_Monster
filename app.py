@@ -48,7 +48,8 @@ def callback(request: Request):
 @app.get("/recent")
 def recent_tracks():
     if "refresh_token" not in user_tokens:
-        return JSONResponse({"error": "User not authenticated"}, status_code=401)
+        login()
+        #return JSONResponse({"error": "User not authenticated"}, status_code=401)
 
     # 🎯 必要に応じてアクセストークンをリフレッシュ
     token_info = sp_oauth.refresh_access_token(user_tokens["refresh_token"])
@@ -56,15 +57,19 @@ def recent_tracks():
     user_tokens["access_token"] = access_token
 
     sp = spotipy.Spotify(auth=access_token)
-    results = sp.current_user_recently_played(limit=10)
+    recently_played = sp.current_user_recently_played(limit=50)
+    top_tracks = sp.current_user_top_tracks(limit=50)
+    saved_albums = sp.current_user_saved_albums(limit=50)
 
-    tracks = [
+    recently_played_tracks = [
         {
             "name": item["track"]["name"],
-            "artist": item["track"]["artists"][0]["name"],
-            "played_at": item["played_at"]
+            "image": item["track"]["album"]["images"][0]["url"],
+            "genre": item["track"]["album"]["genres"][0] if item["track"]["album"]["genres"] else None,
+            "popularity": item["track"]["popularity"],
+            "release_date": item["track"]["album"]["release_date"]
         }
-        for item in results["items"]
+        for item in recently_played["items"]
     ]
 
-    return {"tracks": tracks}
+    return {"tracks": recently_played_tracks}
