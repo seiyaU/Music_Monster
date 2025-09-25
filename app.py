@@ -6,9 +6,9 @@ import os
 app = FastAPI()
 
 # Spotify API 用の設定（環境変数から読むのが安全）
-CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"  # RenderのURLに合わせて修正
+CLIENT_ID = os.getenv("e79acc16b5884a6088adac46a61fc8f0")
+CLIENT_SECRET = os.getenv("72dcf2a487e64c46ab32b543b015a46f")
+REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
 
 SCOPE = "user-read-email user-read-recently-played"
 
