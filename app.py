@@ -13,7 +13,7 @@ CLIENT_ID = "e79acc16b5884a6088adac46a61fc8f0"
 CLIENT_SECRET = "72dcf2a487e64c46ab32b543b015a46f"
 REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
 
-SCOPE = "user-read-email user-read-recently-played user-top-read"
+SCOPE = "user-read-email user-read-recently-played user-top-read user-library-read"
 
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
@@ -72,4 +72,4 @@ def recent_tracks():
         for item in recently_played["items"]
     ]
 
-    return {"tracks": recently_played_tracks}
+    return {"recently_played_tracks": recently_played_tracks}
