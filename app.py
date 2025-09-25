@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from spotipy.oauth2 import SpotifyOAuth
 import spotipy
 import os
@@ -27,7 +28,7 @@ def root():
 @app.get("/login")
 def login():
     auth_url = sp_oauth.get_authorize_url()
-    return {"auth_url": auth_url}
+    return RedirectResponse(auth_url)
 
 # ② Spotifyから返されるcodeを受け取ってアクセストークンに交換
 @app.get("/callback")
