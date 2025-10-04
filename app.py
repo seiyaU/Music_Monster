@@ -12,14 +12,14 @@ user_tokens = {}
 CLIENT_ID = "e79acc16b5884a6088adac46a61fc8f0"
 CLIENT_SECRET = "72dcf2a487e64c46ab32b543b015a46f"
 REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
-
 SCOPE = "user-read-email user-read-recently-played user-top-read user-library-read"
 
 sp_oauth = SpotifyOAuth(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     redirect_uri=REDIRECT_URI,
-    scope=SCOPE
+    scope=SCOPE,
+    cache_path=".spotify_cache"
 )
 
 @app.get("/")
@@ -38,31 +38,36 @@ def callback(request: Request):
         return JSONResponse({"error": "No code provided"}, status_code=400)
 
     token_info = sp_oauth.get_access_token(code)
+    sp = spotipy.Spotify(auth=token_info["access_token"])
+    user_info = sp.current_user()  # 👈 ユーザー情報を取得
+    user_id = user_info["id"]
 
-    # 🎯 refresh_token を保存
-    user_tokens["refresh_token"] = token_info["refresh_token"]
-    user_tokens["access_token"] = token_info["access_token"]
+    # ユーザーごとにトークンを保存
+    user_tokens[user_id] = token_info
 
-    return {"status": "authorized"}
+    return {"status": "authorized", "user_id": user_id}
 
-@app.get("/recent")
-def recent_tracks():
-    if "refresh_token" not in user_tokens:
+@app.get("/recent/{user_id}")
+def recent_tracks(user_id: str):
+    if user_id not in user_tokens:
         return JSONResponse({"error": "User not authenticated"}, status_code=401)
 
-    token_info = sp_oauth.refresh_access_token(user_tokens["refresh_token"])
+    # トークン更新
+    token_info = sp_oauth.refresh_access_token(user_tokens[user_id]["refresh_token"])
+    user_tokens[user_id] = token_info
     access_token = token_info["access_token"]
-    user_tokens["access_token"] = access_token
 
     sp = spotipy.Spotify(auth=access_token)
-    recently_played = sp.current_user_recently_played(limit=50)
+    recently_played = sp.current_user_recently_played(limit=10)
 
-    recently_played_tracks = [
+    tracks = [
         {
             "name": item["track"]["name"],
-            "image": item["track"]["album"]["images"][0]["url"],
+            "artist": item["track"]["artists"][0]["name"],
+            "image": item["track"]["album"]["images"][0]["url"] if item["track"]["album"]["images"] else None,
+            "played_at": item["played_at"]
         }
         for item in recently_played["items"]
     ]
 
-    return JSONResponse(content={"recently_played_tracks": recently_played_tracks})
+    return {"user_id": user_id, "recently_played": tracks}
