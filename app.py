@@ -58,7 +58,7 @@ def recent_tracks(user_id: str):
     access_token = token_info["access_token"]
 
     sp = spotipy.Spotify(auth=access_token)
-    recently_played = sp.current_user_recently_played(limit=10)
+    recently_played = sp.current_user_recently_played(limit=50)
 
     tracks = [
         {
