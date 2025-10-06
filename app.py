@@ -65,7 +65,8 @@ def recent_tracks(user_id: str):
             "name": item["track"]["name"],
             "artist": item["track"]["artists"][0]["name"],
             "image": item["track"]["album"]["images"][0]["url"] if item["track"]["album"]["images"] else None,
-            "artist_id": item["track"]["artists"][0]["id"] if item["track"]["artists"] else None
+            "artist_id": item["track"]["artists"][0]["id"] if item["track"]["artists"] else None,
+            "genres": sp.artist(item["track"]["artists"][0]["id"]).get('genres', []) if item["track"]["artists"] else []
         }
         for item in recently_played["items"]
     ]
