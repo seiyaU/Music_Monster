@@ -33,7 +33,7 @@ def login():
     return redirect(auth_url)
 
 
-# 🔹 Spotify コールバック処理
+# 🔹 Spotify コールバック処お理
 @app.route("/callback")
 def callback():
     sp_oauth = SpotifyOAuth(
