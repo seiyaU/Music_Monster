@@ -6,8 +6,8 @@ import os
 app = Flask(__name__)
 
 # Spotify API credentials（環境変数に設定）
-CLIENT_ID = os.getenv("e79acc16b5884a6088adac46a61fc8f0")
-CLIENT_SECRET = os.getenv("72dcf2a487e64c46ab32b543b015a46f")
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
 
 # 認証スコープ
