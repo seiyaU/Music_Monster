@@ -65,7 +65,7 @@ def recent_tracks(user_id: str):
             "name": item["track"]["name"],
             "artist": item["track"]["artists"][0]["name"],
             "image": item["track"]["album"]["images"][0]["url"] if item["track"]["album"]["images"] else None,
-            "played_at": item["played_at"]
+            "artist_id": item["track"]["artists"][0]["id"] if item["track"]["artists"] else None
         }
         for item in recently_played["items"]
     ]
