@@ -1,8 +1,8 @@
 from flask import Flask, redirect, request, jsonify
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-print("DEBUG ENV:", os.getenv("SPOTIPY_CLIENT_ID"))
 import os
+print("DEBUG ENV:", os.getenv("SPOTIPY_CLIENT_ID"))
 
 app = Flask(__name__)
 
