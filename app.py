@@ -1,80 +1,113 @@
-import os
-from flask import Flask, redirect, request, jsonify, session
-from spotipy.oauth2 import SpotifyOAuth
-import spotipy
+from flask import Flask, redirect, request, session, jsonify
+import requests
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey")
+app.secret_key = "YOUR_SECRET_KEY"
 
-# 環境変数の設定（Renderの環境変数を使用）
-CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
-SCOPE = "user-read-recently-played user-top-read user-read-private"
-
-@app.route("/")
-def index():
-    return "Spotify Login API is running"
+SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
+SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
+REDIRECT_URI = "http://localhost:5000/callback"
 
 @app.route("/login")
 def login():
-    print("DEBUG ENV CLIENT_ID:", CLIENT_ID)
-    print("DEBUG ENV REDIRECT_URI:", REDIRECT_URI)
-
-    if not CLIENT_ID or not CLIENT_SECRET or not REDIRECT_URI:
-        return jsonify({"error": "Missing Spotify credentials"}), 500
-
-    sp_oauth = SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
-        scope=SCOPE
+    scope = "user-read-recently-played"
+    auth_url = (
+        f"https://accounts.spotify.com/authorize"
+        f"?response_type=code&client_id={SPOTIFY_CLIENT_ID}"
+        f"&scope={scope}&redirect_uri={REDIRECT_URI}"
     )
-    auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
     if not code:
-        return jsonify({"error": "Missing authorization code"}), 400
+        return "認証に失敗しました。", 400
 
-    sp_oauth = SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        redirect_uri=REDIRECT_URI,
-        scope=SCOPE
+    token_res = requests.post(
+        "https://accounts.spotify.com/api/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": REDIRECT_URI,
+            "client_id": SPOTIFY_CLIENT_ID,
+            "client_secret": SPOTIFY_CLIENT_SECRET,
+        },
     )
+    token_data = token_res.json()
+    access_token = token_data.get("access_token")
+    if not access_token:
+        return "アクセストークン取得に失敗しました。", 400
 
-    token_info = sp_oauth.get_access_token(code, check_cache=False)
-    if not token_info:
-        return jsonify({"error": "Failed to get access token"}), 500
+    user_res = requests.get(
+        "https://api.spotify.com/v1/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    user_data = user_res.json()
+    user_id = user_data.get("id")
 
-    # Flaskのセッションにトークン保存
-    session["token_info"] = token_info
+    session["access_token"] = access_token
+    session["user_id"] = user_id
 
-    # 認可完了後のレスポンス
-    return jsonify({"status": "success", "access_token": token_info["access_token"]})
+    return f"""
+    <html>
+        <body>
+            <h2>認証完了 ✅</h2>
+            <p>User ID: {user_id}</p>
+            <script>window.close();</script>
+        </body>
+    </html>
+    """
 
 @app.route("/auth-status")
 def auth_status():
-    """ 認可状況を確認するためのエンドポイント """
-    token_info = session.get("token_info")
-    if token_info:
-        return jsonify({"authenticated": True})
-    else:
-        return jsonify({"authenticated": False}), 401
+    user_id = session.get("user_id")
+    if user_id:
+        return jsonify({"authenticated": True, "user_id": user_id})
+    return jsonify({"authenticated": False})
 
-@app.route("/user")
-def get_user_info():
-    """ Spotifyユーザー情報を返す """
-    token_info = session.get("token_info")
-    if not token_info:
-        return jsonify({"error": "Not authenticated"}), 401
+@app.route("/recent/<user_id>")
+def recent_tracks(user_id):
+    access_token = session.get("access_token")
+    if not access_token:
+        return jsonify({"error": "未認証"}), 401
 
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    user_info = sp.current_user()
-    return jsonify(user_info)
+    res = requests.get(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=10",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    items = res.json().get("items", [])
+
+    artist_ids = {artist["id"] for item in items for artist in item.get("track", {}).get("artists", [])}
+    artist_id_list = ",".join(artist_ids)
+
+    # バッチでアーティスト情報取得
+    artist_info = {}
+    if artist_id_list:
+        artist_res = requests.get(
+            f"https://api.spotify.com/v1/artists?ids={artist_id_list}",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        for artist in artist_res.json().get("artists", []):
+            artist_info[artist["id"]] = artist.get("genres", [])
+
+    tracks = []
+    for item in items:
+        track = item.get("track", {})
+        artists = track.get("artists", [])
+        genres = set()
+
+        for artist in artists:
+            genres.update(artist_info.get(artist["id"], []))
+
+        tracks.append({
+            "name": track.get("name"),
+            "artist": ", ".join([a["name"] for a in artists]),
+            "image": track.get("album", {}).get("images", [{}])[0].get("url", ""),
+            "genres": list(genres)
+        })
+
+    return jsonify({"recently_played": tracks})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    app.run(debug=True)
