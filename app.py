@@ -1,121 +1,111 @@
-import os
-from flask import Flask, redirect, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, jsonify, redirect
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
+import os
 
 app = Flask(__name__)
-CORS(app)
 
-# --- ユーザーごとにトークンを保持 ---
-TOKENS = {}
+# ✅ Render環境変数から取得
+CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "https://music-cat-7r71.onrender.com/callback")
 
-# --- Spotify OAuth 設定 ---
-SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
-SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
-SPOTIPY_REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "https://music-cat-7r71.onrender.com/callback")
+# 認証済みユーザー情報を保持（stateごと）
+sessions = {}
 
-SCOPE = "user-read-recently-played user-read-private user-read-email"
+@app.route("/")
+def home():
+    return "✅ Spotify OAuth Server Running"
 
-def create_spotify_oauth(state=None):
-    return SpotifyOAuth(
-        client_id=SPOTIPY_CLIENT_ID,
-        client_secret=SPOTIPY_CLIENT_SECRET,
-        redirect_uri=SPOTIPY_REDIRECT_URI,
-        scope=SCOPE,
-        state=state
-    )
-
-# ------------------------------
-# 🌐 認証フロー
-# ------------------------------
 
 @app.route("/login")
 def login():
-    """
-    クライアントごとにユニークな state（例：UUIDやユーザーID）を指定してリダイレクト。
-    ここでは簡易的にリクエストパラメータから受け取る形式。
-    例: /login?state=noel1109.marble1101
-    """
-    state = request.args.get("state", "default_user")
-    sp_oauth = create_spotify_oauth(state)
+    # 各認証ごとに一意なstateを発行
+    import uuid
+    state = str(uuid.uuid4())
+
+    sp_oauth = SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope="user-read-recently-played user-read-email",
+        cache_path=None,
+        state=state
+    )
+
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
 
 @app.route("/callback")
 def callback():
-    """
-    Spotify 認証後に呼ばれる。
-    code と state を受け取り、アクセストークンを保存。
-    """
-    sp_oauth = create_spotify_oauth()
     code = request.args.get("code")
-    state = request.args.get("state", "default_user")
+    state = request.args.get("state")
 
-    token_info = sp_oauth.get_access_token(code)
-    if not token_info:
-        return jsonify({"error": "Failed to retrieve token"}), 400
+    sp_oauth = SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope="user-read-recently-played user-read-email",
+        cache_path=None,
+        state=state
+    )
 
+    token_info = sp_oauth.get_access_token(code, as_dict=True)
     access_token = token_info["access_token"]
 
-    # state をキーに保存（ユーザーごとに独立）
-    TOKENS[state] = access_token
+    # ✅ ここでSpotify APIからユーザー情報を取得
+    sp = Spotify(auth=access_token)
+    user_profile = sp.me()
+    user_id = user_profile["id"]
 
-    # トークンを返す
-    return jsonify({"status": "success", "user_id": state, "access_token": access_token})
+    # ✅ 保存（stateごとにユーザーIDとトークン）
+    sessions[state] = {
+        "user_id": user_id,
+        "access_token": access_token,
+        "authenticated": True
+    }
+
+    return jsonify({
+        "status": "success",
+        "user_id": user_id,
+        "access_token": access_token
+    })
 
 
 @app.route("/auth-status")
 def auth_status():
-    """
-    クライアントが state を指定して認証状態を確認する。
-    例: /auth-status?state=noel1109.marble1101
-    """
-    state = request.args.get("state", "default_user")
-    if state in TOKENS:
-        return jsonify({"authenticated": True, "user_id": state})
+    state = request.args.get("state")
+    if state in sessions and sessions[state]["authenticated"]:
+        return jsonify({
+            "authenticated": True,
+            "user_id": sessions[state]["user_id"]
+        })
     return jsonify({"authenticated": False}), 404
 
 
-# ------------------------------
-# 🎵 最近再生した楽曲を取得（ユーザー別）
-# ------------------------------
-
 @app.route("/recent/<user_id>")
 def recent_tracks(user_id):
-    """
-    特定ユーザー（user_id）の最近再生曲を取得。
-    """
-    access_token = TOKENS.get(user_id)
-    if not access_token:
-        return jsonify({"error": f"No authenticated user found for {user_id}"}), 401
+    session_data = next((v for v in sessions.values() if v["user_id"] == user_id), None)
+    if not session_data:
+        return jsonify({"error": "User not authenticated"}), 400
 
-    sp = Spotify(auth=access_token)
-    try:
-        items = sp.current_user_recently_played(limit=10)["items"]
-    except Exception as e:
-        return jsonify({"error": f"Spotify API error: {str(e)}"}), 500
+    sp = Spotify(auth=session_data["access_token"])
+    recent = sp.current_user_recently_played(limit=10)
 
     results = []
-    for item in items:
+    for item in recent["items"]:
         track = item["track"]
         artist = track["artists"][0]
         artist_info = sp.artist(artist["id"])
-        genres = artist_info.get("genres", [])
         results.append({
             "name": track["name"],
             "artist": artist["name"],
-            "genres": genres,
-            "image": track["album"]["images"][0]["url"] if track["album"]["images"] else ""
+            "genres": artist_info.get("genres", []),
+            "image": track["album"]["images"][0]["url"] if track["album"]["images"] else None
         })
 
     return jsonify({"recently_played": results})
-
-
-@app.route("/")
-def home():
-    return "✅ Multi-user Spotify API Server running on Render"
 
 
 if __name__ == "__main__":
