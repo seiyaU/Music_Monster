@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 
 app = Flask(__name__)
+app.secret_key = "supersecretkey"  # セッション用
 
 # 環境変数で管理（Renderの設定で追加）
 SPOTIPY_CLIENT_ID = os.environ.get("SPOTIPY_CLIENT_ID")
@@ -55,6 +56,15 @@ def login():
     return jsonify({"url": auth_url})
 
 
+@app.route("/auth-status")
+def auth_status():
+    token_info = session.get("token_info")
+    if token_info:
+        return jsonify({"authenticated": True, "access_token": token_info.get("access_token")})
+    return jsonify({"authenticated": False}), 404
+
+
+
 @app.route("/auth-callback")
 def auth_callback():
     code = request.args.get("code")
@@ -65,5 +75,6 @@ def auth_callback():
         scope=SCOPE
     )
     token_info = sp_oauth.get_access_token(code)
-    access_token = token_info["access_token"]
-    return jsonify({"access_token": access_token, "authenticated": True})
+    session["token_info"] = token_info
+    return jsonify({"authenticated": True, "access_token": token_info["access_token"]})
+
