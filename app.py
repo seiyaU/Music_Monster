@@ -6,7 +6,7 @@ app.secret_key = "YOUR_SECRET_KEY"
 
 SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
 SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
-REDIRECT_URI = "http://localhost:5000/callback"
+REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
 
 @app.route("/login")
 def login():
