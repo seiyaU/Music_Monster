@@ -20,21 +20,29 @@ def home():
 
 @app.route("/login")
 def login():
-    # 各認証ごとに一意なstateを発行
     import uuid
-    state = str(uuid.uuid4())
+    state = request.args.get("state") or str(uuid.uuid4())  # ← クライアントが指定したstateを尊重
 
     sp_oauth = SpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
         scope="user-read-recently-played user-read-email",
-        cache_path=None,
-        state=state
+        cache_path=None
     )
 
-    auth_url = sp_oauth.get_authorize_url()
+    # ✅ SpotifyOAuthの内部stateを上書きしないように、自分でURLを構築
+    auth_url = (
+        f"https://accounts.spotify.com/authorize"
+        f"?response_type=code"
+        f"&client_id={CLIENT_ID}"
+        f"&scope=user-read-recently-played%20user-read-email"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&state={state}"
+    )
+
     return redirect(auth_url)
+
 
 
 @app.route("/callback")
