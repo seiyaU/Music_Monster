@@ -99,7 +99,7 @@ def recent_tracks(user_id):
         return jsonify({"error": "User not authenticated"}), 400
 
     sp = Spotify(auth=session_data["access_token"])
-    recent = sp.current_user_recently_played(limit=10)
+    recent = sp.current_user_recently_played(limit=50)
 
     results = []
     for item in recent["items"]:
