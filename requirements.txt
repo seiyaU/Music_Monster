@@ -1,8 +1,6 @@
 flask
 flask_cors
 spotipy
-requests
-gunicorn
 
 
 
