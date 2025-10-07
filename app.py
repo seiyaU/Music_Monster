@@ -63,17 +63,22 @@ def callback():
     access_token = token_info["access_token"]
 
     # ✅ ここでSpotify APIからユーザー情報を取得
+    if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        sessions[user_id]["access_token"] = token_info["access_token"]
+        sessions[user_id]["expires_at"] = token_info["expires_at"]
+
     sp = Spotify(auth=access_token)
     user_profile = sp.me()
     user_id = user_profile["id"]
 
     # ✅ 保存（stateごとにユーザーIDとトークン）
-    sessions[state] = {
-        "user_id": user_id,
-        "access_token": access_token,
-        "authenticated": True
-    }
-
+    sessions[user_id] = {
+    "access_token": token_info["access_token"],
+    "refresh_token": token_info["refresh_token"],
+    "expires_at": token_info["expires_at"],
+}
+    
     return jsonify({
         "status": "success",
         "user_id": user_id,
