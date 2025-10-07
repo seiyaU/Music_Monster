@@ -61,7 +61,7 @@ def auth_status():
     token_info = session.get("token_info")
     if token_info:
         return jsonify({"authenticated": True, "access_token": token_info.get("access_token")})
-    return jsonify({"authenticated": False}), 404
+    return jsonify({"authenticated": False}), 200  # ここを200に変更
 
 
 
