@@ -1,113 +1,123 @@
-from flask import Flask, redirect, request, session, jsonify
+import os
+import json
+import uuid
+from flask import Flask, request, redirect, jsonify
 import requests
 
 app = Flask(__name__)
-app.secret_key = "YOUR_SECRET_KEY"
 
-SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
-SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
-REDIRECT_URI = "https://music-cat-7r71.onrender.com/callback"
+# 環境変数から取得
+CLIENT_ID = os.environ.get("SPOTIPY_CLIENT_ID")
+CLIENT_SECRET = os.environ.get("SPOTIPY_CLIENT_SECRET")
+REDIRECT_URI = os.environ.get("SPOTIPY_REDIRECT_URI")
+
+AUTH_URL = "https://accounts.spotify.com/authorize"
+TOKEN_URL = "https://accounts.spotify.com/api/token"
+
+# 認証ステータス保存
+auth_sessions = {}
 
 @app.route("/login")
 def login():
+    state = str(uuid.uuid4())
+    auth_sessions[state] = {"authenticated": False}
+
     scope = "user-read-recently-played"
-    auth_url = (
-        f"https://accounts.spotify.com/authorize"
-        f"?response_type=code&client_id={SPOTIFY_CLIENT_ID}"
-        f"&scope={scope}&redirect_uri={REDIRECT_URI}"
+    auth_query = (
+        f"{AUTH_URL}?response_type=code&client_id={CLIENT_ID}"
+        f"&scope={scope}&redirect_uri={REDIRECT_URI}&state={state}"
     )
-    return redirect(auth_url)
+    return redirect(auth_query)
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-    if not code:
-        return "認証に失敗しました。", 400
+    state = request.args.get("state")
 
-    token_res = requests.post(
-        "https://accounts.spotify.com/api/token",
-        data={
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": REDIRECT_URI,
-            "client_id": SPOTIFY_CLIENT_ID,
-            "client_secret": SPOTIFY_CLIENT_SECRET,
-        },
-    )
-    token_data = token_res.json()
-    access_token = token_data.get("access_token")
+    if not code or not state or state not in auth_sessions:
+        return "認証エラー", 400
+
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI,
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+    }
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+    res = requests.post(TOKEN_URL, data=data, headers=headers)
+    if res.status_code != 200:
+        return f"トークン取得エラー: {res.text}", 400
+
+    tokens = res.json()
+    access_token = tokens.get("access_token")
     if not access_token:
-        return "アクセストークン取得に失敗しました。", 400
+        return "アクセストークンが取得できませんでした", 400
 
-    user_res = requests.get(
+    # ユーザー情報取得
+    profile_res = requests.get(
         "https://api.spotify.com/v1/me",
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers={"Authorization": f"Bearer {access_token}"}
     )
-    user_data = user_res.json()
-    user_id = user_data.get("id")
+    if profile_res.status_code != 200:
+        return "ユーザー情報取得エラー", 400
 
-    session["access_token"] = access_token
-    session["user_id"] = user_id
+    profile = profile_res.json()
+    user_id = profile.get("id")
 
-    return f"""
+    # 認証状態保存
+    auth_sessions[state] = {
+        "authenticated": True,
+        "user_id": user_id,
+        "access_token": access_token
+    }
+
+    return """
     <html>
-        <body>
-            <h2>認証完了 ✅</h2>
-            <p>User ID: {user_id}</p>
-            <script>window.close();</script>
-        </body>
+    <body>
+    <h2>認証成功！</h2>
+    <p>このウィンドウを閉じて extraction.py を続けてください。</p>
+    </body>
     </html>
     """
 
 @app.route("/auth-status")
 def auth_status():
-    user_id = session.get("user_id")
-    if user_id:
-        return jsonify({"authenticated": True, "user_id": user_id})
+    for state, info in auth_sessions.items():
+        if info["authenticated"]:
+            return jsonify({"authenticated": True, "user_id": info["user_id"]})
     return jsonify({"authenticated": False})
 
 @app.route("/recent/<user_id>")
 def recent_tracks(user_id):
-    access_token = session.get("access_token")
+    access_token = None
+    for info in auth_sessions.values():
+        if info.get("user_id") == user_id:
+            access_token = info.get("access_token")
+            break
     if not access_token:
-        return jsonify({"error": "未認証"}), 401
+        return jsonify({"error": "アクセストークンなし"}), 400
 
     res = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played?limit=10",
         headers={"Authorization": f"Bearer {access_token}"}
     )
+    if res.status_code != 200:
+        return jsonify({"error": res.text}), res.status_code
+
     items = res.json().get("items", [])
-
-    artist_ids = {artist["id"] for item in items for artist in item.get("track", {}).get("artists", [])}
-    artist_id_list = ",".join(artist_ids)
-
-    # バッチでアーティスト情報取得
-    artist_info = {}
-    if artist_id_list:
-        artist_res = requests.get(
-            f"https://api.spotify.com/v1/artists?ids={artist_id_list}",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        for artist in artist_res.json().get("artists", []):
-            artist_info[artist["id"]] = artist.get("genres", [])
-
-    tracks = []
+    recent = []
     for item in items:
         track = item.get("track", {})
-        artists = track.get("artists", [])
-        genres = set()
-
-        for artist in artists:
-            genres.update(artist_info.get(artist["id"], []))
-
-        tracks.append({
+        recent.append({
             "name": track.get("name"),
-            "artist": ", ".join([a["name"] for a in artists]),
-            "image": track.get("album", {}).get("images", [{}])[0].get("url", ""),
-            "genres": list(genres)
+            "artist": ", ".join([a.get("name", "") for a in track.get("artists", [])]),
+            "genres": [],  # Spotify API ではアーティストジャンルは別取得
+            "image": track.get("album", {}).get("images", [{}])[0].get("url", "")
         })
 
-    return jsonify({"recently_played": tracks})
+    return jsonify({"recently_played": recent})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
