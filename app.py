@@ -96,8 +96,9 @@ def recent_tracks(user_id):
         if info.get("user_id") == user_id:
             access_token = info.get("access_token")
             break
+
     if not access_token:
-        return jsonify({"error": "アクセストークンなし"}), 400
+        return jsonify({"error": "アクセストークンが見つかりません"}), 400
 
     res = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played?limit=10",
@@ -113,7 +114,7 @@ def recent_tracks(user_id):
         recent.append({
             "name": track.get("name"),
             "artist": ", ".join([a.get("name", "") for a in track.get("artists", [])]),
-            "genres": [],  # Spotify API ではアーティストジャンルは別取得
+            "genres": [],  
             "image": track.get("album", {}).get("images", [{}])[0].get("url", "")
         })
 
