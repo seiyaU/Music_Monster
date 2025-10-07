@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, request, jsonify, session
+from flask import Flask, redirect, request, jsonify
 from flask_cors import CORS
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
@@ -7,62 +7,95 @@ from spotipy.oauth2 import SpotifyOAuth
 app = Flask(__name__)
 CORS(app)
 
-# Flask セッション暗号化キー（任意の文字列）
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey")
+# --- ユーザーごとにトークンを保持 ---
+TOKENS = {}
 
-# --- 環境変数から Spotify クレデンシャルを取得 ---
+# --- Spotify OAuth 設定 ---
 SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 SPOTIPY_REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "https://music-cat-7r71.onrender.com/callback")
 
-SCOPE = "user-read-recently-played"
+SCOPE = "user-read-recently-played user-read-private user-read-email"
 
-# --- SpotifyOAuth 設定 ---
-def create_spotify_oauth():
+def create_spotify_oauth(state=None):
     return SpotifyOAuth(
         client_id=SPOTIPY_CLIENT_ID,
         client_secret=SPOTIPY_CLIENT_SECRET,
         redirect_uri=SPOTIPY_REDIRECT_URI,
-        scope=SCOPE
+        scope=SCOPE,
+        state=state
     )
 
-# -------------------------------
+# ------------------------------
 # 🌐 認証フロー
-# -------------------------------
+# ------------------------------
 
 @app.route("/login")
 def login():
-    sp_oauth = create_spotify_oauth()
+    """
+    クライアントごとにユニークな state（例：UUIDやユーザーID）を指定してリダイレクト。
+    ここでは簡易的にリクエストパラメータから受け取る形式。
+    例: /login?state=noel1109.marble1101
+    """
+    state = request.args.get("state", "default_user")
+    sp_oauth = create_spotify_oauth(state)
     auth_url = sp_oauth.get_authorize_url()
     return redirect(auth_url)
 
+
 @app.route("/callback")
 def callback():
+    """
+    Spotify 認証後に呼ばれる。
+    code と state を受け取り、アクセストークンを保存。
+    """
     sp_oauth = create_spotify_oauth()
     code = request.args.get("code")
+    state = request.args.get("state", "default_user")
+
     token_info = sp_oauth.get_access_token(code)
-    session["token_info"] = token_info
-    return jsonify({"status": "success", "access_token": token_info["access_token"]})
+    if not token_info:
+        return jsonify({"error": "Failed to retrieve token"}), 400
+
+    access_token = token_info["access_token"]
+
+    # state をキーに保存（ユーザーごとに独立）
+    TOKENS[state] = access_token
+
+    # トークンを返す
+    return jsonify({"status": "success", "user_id": state, "access_token": access_token})
+
 
 @app.route("/auth-status")
 def auth_status():
-    token_info = session.get("token_info")
-    if token_info:
-        return jsonify({"authenticated": True, "access_token": token_info.get("access_token")})
+    """
+    クライアントが state を指定して認証状態を確認する。
+    例: /auth-status?state=noel1109.marble1101
+    """
+    state = request.args.get("state", "default_user")
+    if state in TOKENS:
+        return jsonify({"authenticated": True, "user_id": state})
     return jsonify({"authenticated": False}), 404
 
-# -------------------------------
-# 🎵 最近再生した楽曲を取得
-# -------------------------------
 
-@app.route("/recent")
-def recent_tracks():
-    token_info = session.get("token_info")
-    if not token_info:
-        return jsonify({"error": "User not authenticated"}), 401
+# ------------------------------
+# 🎵 最近再生した楽曲を取得（ユーザー別）
+# ------------------------------
 
-    sp = Spotify(auth=token_info["access_token"])
-    items = sp.current_user_recently_played(limit=10)["items"]
+@app.route("/recent/<user_id>")
+def recent_tracks(user_id):
+    """
+    特定ユーザー（user_id）の最近再生曲を取得。
+    """
+    access_token = TOKENS.get(user_id)
+    if not access_token:
+        return jsonify({"error": f"No authenticated user found for {user_id}"}), 401
+
+    sp = Spotify(auth=access_token)
+    try:
+        items = sp.current_user_recently_played(limit=10)["items"]
+    except Exception as e:
+        return jsonify({"error": f"Spotify API error: {str(e)}"}), 500
 
     results = []
     for item in items:
@@ -79,9 +112,11 @@ def recent_tracks():
 
     return jsonify({"recently_played": results})
 
+
 @app.route("/")
 def home():
-    return "✅ Spotify API Server is running."
+    return "✅ Multi-user Spotify API Server running on Render"
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
