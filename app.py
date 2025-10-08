@@ -101,12 +101,44 @@ def auth_status():
 
 @app.route("/recent/<user_id>")
 def recent_tracks(user_id):
-    session_data = next((v for v in sessions.values() if v["user_id"] == user_id), None)
-    if not session_data:
-        return jsonify({"error": "User not authenticated"}), 400
+    session_data = next((v for v in sessions.values() if v.get("user_id") == user_id), None)
 
-    sp = Spotify(auth=session_data["access_token"])
-    recent = sp.current_user_recently_played(limit=50)
+    # 🔸 トークンが存在しない → 自動で /login にリダイレクト
+    if not session_data or "access_token" not in session_data:
+        print(f"⚠️ トークン未登録: {user_id} → /login にリダイレクトします")
+        return redirect("/login")
+
+    access_token = session_data["access_token"]
+
+    # 🎯 トークンの有効期限が切れていたらリフレッシュ（自動更新）
+    if "expires_at" in session_data:
+        from time import time
+        if time() > session_data["expires_at"]:
+            print(f"🔁 トークン期限切れ、リフレッシュ中: {user_id}")
+            sp_oauth = SpotifyOAuth(
+                client_id=CLIENT_ID,
+                client_secret=CLIENT_SECRET,
+                redirect_uri=REDIRECT_URI,
+                scope="user-read-recently-played user-read-email"
+            )
+            try:
+                token_info = sp_oauth.refresh_access_token(session_data["refresh_token"])
+                session_data["access_token"] = token_info["access_token"]
+                session_data["expires_at"] = token_info["expires_at"]
+                sessions[user_id] = session_data  # 更新を保存
+                access_token = token_info["access_token"]
+                print("✅ トークン更新成功")
+            except Exception as e:
+                print(f"❌ トークン更新失敗: {e}")
+                return redirect("/login")
+
+    # 🎯 Spotify API 呼び出し
+    sp = Spotify(auth=access_token)
+    try:
+        recent = sp.current_user_recently_played(limit=50)
+    except Exception as e:
+        print(f"❌ Spotify API エラー: {e}")
+        return redirect("/login")
 
     results = []
     for item in recent["items"]:
@@ -121,6 +153,7 @@ def recent_tracks(user_id):
         })
 
     return jsonify({"recently_played": results})
+
 
 
 if __name__ == "__main__":
