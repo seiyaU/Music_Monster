@@ -15,15 +15,13 @@ REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI", "https://music-cat-7r71.onrende
 # ✅ 認証済みユーザー情報を保持（stateとuser_idの両方で参照できるように）
 sessions = {}
 
-
 @app.route("/")
 def home():
     return "✅ Spotify OAuth Server Running"
 
-
 @app.route("/login")
 def login():
-    state = request.args.get("state") or str(uuid.uuid4())  # ← クライアントが指定したstateを尊重
+    state = request.args.get("state") or str(uuid.uuid4())  
 
     # ✅ 認可URLを自分で構築
     auth_url = (
@@ -37,7 +35,6 @@ def login():
 
     print(f"🌐 Redirecting user to Spotify login (state={state})")
     return redirect(auth_url)
-
 
 @app.route("/callback")
 def callback():
@@ -74,8 +71,7 @@ def callback():
     }
 
     sessions[state] = session_data
-    sessions[user_id] = session_data  # ← user_idでアクセスできるようにする
-
+    sessions[user_id] = session_data 
     print(f"✅ Authorized: {user_id} (state={state})")
 
     return jsonify({
