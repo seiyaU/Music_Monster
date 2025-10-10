@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, render_template, send_from_directory
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -17,7 +17,19 @@ sessions = {}
 
 @app.route("/")
 def home():
-    return "✅ Spotify OAuth Server Running"
+    return render_template("index.html")  # PWAのメイン画面を返す
+
+# PWA用のファイルを提供
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("static", "manifest.json")
+
+@app.route("/serviceWorker.js")
+def service_worker():
+    return send_from_directory("static", "serviceWorker.js")
+
+
+
 
 @app.route("/login")
 def login():
