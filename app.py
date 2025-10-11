@@ -119,7 +119,7 @@ def generate_image(user_id):
     # ======================
     # 🎨 Hugging Face 画像生成（img2img）
     # ======================
-    model_id = "stabilityai/stable-diffusion-img2img"
+    model_id = "runwayml/stable-diffusion-inpainting"
     prompt = f"A fantasy creature inspired by the song '{song_name}' by {artist_name}, artistic, vivid style"
 
     headers = {
