@@ -143,7 +143,7 @@ def generate_image(user_id):
         f"https://api-inference.huggingface.co/models/{model_id}",
         headers=headers,
         files={
-            "image": ("base.png", init_image, "image/png")
+            "image": ("base.png", image_bytes, "image/png")
         },
         data={
             "inputs": prompt
