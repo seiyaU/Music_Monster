@@ -103,7 +103,7 @@ def generate_image(user_id):
         "influenced_word": "dreamy"
     }
 
-    base_path = f"static/base_images/{user_data['character_animal']}.png"
+    base_path = f"animal_templates/{user_data['character_animal']}.png"
     img = Image.open(base_path).convert("RGBA")
 
     # --- テキストを重ねる（簡易的な生成例）---
