@@ -4,6 +4,13 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 import uuid
 from time import time
+import base64
+from io import BytesIO
+from flask import send_file
+from PIL import Image, ImageDraw, ImageFont
+import requests
+
+
 
 app = Flask(__name__)
 
@@ -112,6 +119,38 @@ def recent_tracks(user_id):
 
     return jsonify({"recently_played": results})
 
+
+# ################# 画像生成 #################
+@app.route("/generate-image", methods=["POST"])
+def generate_image():
+    """
+    クライアントから `character_animal` と `influenced_word` を受け取り、
+    既存の画像（例：animal_templates/{animal}.png）をもとに
+    AI的な合成風の画像を生成（ここでは擬似的にPILで文字追加）
+    """
+
+    data = request.get_json()
+    character_animal = data.get("character_animal")
+    influenced_word = data.get("influenced_word")
+
+    # 🐾 ベース画像を取得
+    base_path = f"animal_templates/{character_animal}.png"
+    if not os.path.exists(base_path):
+        return jsonify({"error": "Base image not found"}), 404
+
+    img = Image.open(base_path).convert("RGBA")
+
+    # 🎨 文字を描画（簡易AI風合成）
+    draw = ImageDraw.Draw(img)
+    text = f"Inspired by {influenced_word}"
+    draw.text((30, 30), text, fill=(255, 255, 255, 255))
+
+    # 🔄 画像を一時保存して返す
+    output = BytesIO()
+    img.save(output, format="PNG")
+    output.seek(0)
+
+    return send_file(output, mimetype="image/png")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
