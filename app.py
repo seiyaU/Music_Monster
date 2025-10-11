@@ -122,7 +122,7 @@ def generate_image(user_id):
     }
 
     # ✅ Replicateモデルのversion IDだけを指定
-    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
+    MODEL_VERSION = "232569243dacecab70a4475be391353ad9b42819617225848847f28752205acf"
 
 
     payload = {
