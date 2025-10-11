@@ -87,8 +87,6 @@ def callback():
 @app.route("/generate/<user_id>")
 def generate_image(user_id):
     """Spotify履歴&ベース画像を使ってHugging FaceでAI画像を生成"""
-
-    # セッション確認
     session_data = sessions.get(user_id)
     if not session_data:
         return redirect("/login")
@@ -112,19 +110,32 @@ def generate_image(user_id):
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
 
-    # 画像をバイナリで読み込み
     with open(base_image_path, "rb") as f:
         init_image = f.read()
 
     # ======================
     # 🎨 Hugging Face 画像生成（img2img）
     # ======================
-    model_id = "runwayml/stable-diffusion-inpainting"
+    model_id = "timbrooks/instruct-pix2pix"
     prompt = f"A fantasy creature inspired by the song '{song_name}' by {artist_name}, artistic, vivid style"
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
 
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
+    files = {
+        "image": ("image.png", image_bytes, "image/png"),
     }
+    data = {"inputs": prompt, "options": {"wait_for_model": True}}
+
+    hf_res = requests.post(
+        f"https://api-inference.huggingface.co/models/{model_id}",
+        headers=headers,
+        data=data,
+        files=files
+    )
+
+
+
+
+
 
     # multipart/form-data形式で送信
     # 🎨 Hugging Face Inference API呼び出し
@@ -139,29 +150,20 @@ def generate_image(user_id):
         }
     )
 
-    # デバッグ用ログ出力
-    print("📡 HF status:", response.status_code)
-    print("📡 HF headers:", response.headers)
-    try:
-        print("📡 HF response text:", response.text[:500])
-    except Exception:
-        pass
+    print("📡 HF status:", hf_res.status_code)
+    if hf_res.status_code != 200:
+        print("📡 HF response text:", hf_res.text)
+        return f"Image generation failed: {hf_res.text}", 500
 
-    if response.status_code != 200:
-        return f"Image generation failed: {response.text}", 500
-
-    # Hugging Faceのレスポンスは画像バイナリ
-    image_bytes = response.content
-
+    # 🎨 生成画像を保存
     os.makedirs("static/generated", exist_ok=True)
-    output_path = f"static/generated/{user_id}.png"
-    with open(output_path, "wb") as f:
-        f.write(image_bytes)
+    image_path = f"static/generated/{user_id}.png"
+    with open(image_path, "wb") as f:
+        f.write(hf_res.content)
 
-    print(f"🎨 画像生成完了: {output_path}")
+    print(f"🎨 画像生成完了: {image_path}")
 
-    # ✅ 自動的に生成画像を表示
-    return redirect(f"/{output_path}")
+    return redirect(f"/{image_path}")
 
 
 
