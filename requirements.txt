@@ -1,19 +1,6 @@
-# Flask Web Framework
 Flask==3.0.3
-
-# Spotify API Wrapper
 spotipy==2.23.0
-
-# HTTPリクエスト
 requests==2.31.0
-
-# 画像生成（Pillowで擬似AI画像合成）
-Pillow==10.2.0
-
-# YAML設定読み込み
+Pillow==10.4.0
 PyYAML==6.0.1
-
-# OpenAIを後で導入する場合（まだ使わないならコメントアウトでもOK）
-openai==1.52.0
-
 gunicorn==23.0.0
