@@ -107,28 +107,31 @@ def generate_image(user_id):
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         image_data_uri = f"data:image/png;base64,{image_b64}"
 
-    # 🎯 プロンプトを生成
+        # 🎯 プロンプトを生成
     prompt = (
         f"A vivid artistic portrait of a {character_animal} inspired by the song "
         f"'{song_name}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
     )
 
     print(f"🎵 Generating for: {song_name} by {artist_name}")
-    
+
     replicate_url = "https://api.replicate.com/v1/predictions"
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
     }
 
-    # ✅ SDXL Image-to-Image モード
-    # ✅ Replicateモデル（公開されているSDXL 1.0の例）
+    # ✅ モデルとバージョンを分けて指定（ここが重要！）
+    MODEL_ID = "stability-ai/sdxl"
     MODEL_VERSION = "9d21e5f07d274a46a31a1e6b264b4006d1af31a42ceef3f0f23e223e9b6a7e63"
+
     payload = {
+        "model": MODEL_ID,
+        "version": MODEL_VERSION,
         "input": {
             "prompt": prompt,
-            "image": image_data_uri,  # ベース画像を渡す
-            "strength": 0.6           # 原画像をどれくらい保持するか（0.0〜1.0）
+            "image": image_data_uri,
+            "strength": 0.6
         }
     }
 
@@ -148,8 +151,6 @@ def generate_image(user_id):
             return f"Image generation failed: {data}", 500
     else:
         return "Image generation failed after retries.", 500
-
-    
 
     # Polling (生成完了まで待機)
     get_url = data["urls"]["get"]
