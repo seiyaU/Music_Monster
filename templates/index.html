@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Monster</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1DB954" />
+  <script>
+    // ✅ PWA登録
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/serviceWorker.js").then(() => {
+        console.log("Service Worker registered!");
+      });
+    }
+  </script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      background-color: #121212;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+    button {
+      background-color: #1DB954;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      padding: 15px 25px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #18a349;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎵 Music Monster</h1>
+  <p>Spotifyログインしてあなたの音楽キャラクターを作ろう！</p>
+  <button onclick="location.href='/login'">Spotifyでログイン</button>
+</body>
+</html>
