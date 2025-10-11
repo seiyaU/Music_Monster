@@ -10,6 +10,7 @@ from flask import send_file
 from PIL import Image, ImageDraw, ImageFont
 import requests
 import random
+import io
 
 
 
