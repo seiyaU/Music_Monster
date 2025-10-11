@@ -144,7 +144,7 @@ def recent_tracks(user_id):
 
 # ################# 画像生成 #################
 @app.route("/generate-image", methods=["POST"])
-def generate_image():
+def generate_ai_image():
     """
     クライアントから `character_animal` と `influenced_word` を受け取り、
     既存の画像（例：animal_templates/{animal}.png）をもとに
