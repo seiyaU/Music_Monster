@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect, render_template, send_from_directory, url_for
+from flask import Flask, request, jsonify, redirect, render_template, send_from_directory, url_for, send_file
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -9,6 +9,7 @@ from io import BytesIO
 from flask import send_file
 from PIL import Image, ImageDraw, ImageFont
 import requests
+import random
 
 
 
@@ -97,16 +98,26 @@ def generate_image(user_id):
     仮の画像生成ページ。
     実際はここでAI画像生成を行ってURLを返す。
     """
-    session = sessions.get(user_id)
-    if not session:
-        return redirect("/login")
+    user_data = {
+        "character_animal": "cat",
+        "influenced_word": "dreamy"
+    }
 
-    # 🎨 ここにAI画像生成または既存画像編集の処理を実装
-    # 例: CloudinaryやStableDiffusion APIなどを使う
-    image_url = f"https://dummyimage.com/512x512/000/fff.png&text={user_id}"
+    base_path = f"static/base_images/{user_data['character_animal']}.png"
+    img = Image.open(base_path).convert("RGBA")
 
-    # 🎯 自動的に画像URLにリダイレクト
-    return redirect(image_url)
+    # --- テキストを重ねる（簡易的な生成例）---
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+    text = f"{user_data['character_animal']} × {user_data['influenced_word']}"
+    draw.text((20, 20), text, fill=(255, 255, 255, 255), font=font)
+
+    # 画像をメモリに保存して返す
+    img_io = io.BytesIO()
+    img.save(img_io, "PNG")
+    img_io.seek(0)
+
+    return send_file(img_io, mimetype="image/png")
 
 @app.route("/auth-status")
 def auth_status():
