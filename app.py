@@ -73,7 +73,7 @@ def callback():
 # AI画像生成エンドポイント
 @app.route("/generate/<user_id>")
 def generate_image(user_id):
-    """Spotify履歴&ベース画像を使ってHugging FaceでAI画像を生成"""
+
     session_data = sessions.get(user_id)
     if not session_data:
         return redirect("/login")
@@ -122,8 +122,9 @@ def generate_image(user_id):
     }
 
     # ✅ SDXL Image-to-Image モード
+    # ✅ Replicateモデル（公開されているSDXL 1.0の例）
+    MODEL_VERSION = "9d21e5f07d274a46a31a1e6b264b4006d1af31a42ceef3f0f23e223e9b6a7e63"
     payload = {
-        "version": "b19ac35b92b0c437c9f1a8f22a63f7aa9af08ce2d9dc58e3a7d06c204a2bdf29",  # SDXL
         "input": {
             "prompt": prompt,
             "image": image_data_uri,  # ベース画像を渡す
@@ -131,13 +132,22 @@ def generate_image(user_id):
         }
     }
 
-    res = requests.post(replicate_url, headers=headers, json=payload)
-    data = res.json()
+    # ✅ レート制限対応付きでリクエストを送信
+    MAX_RETRIES = 3
+    for attempt in range(MAX_RETRIES):
+        res = requests.post(replicate_url, headers=headers, json=payload)
+        data = res.json()
 
-
-    if res.status_code != 201:
-        print("🚨 Replicate error:", data)
-        return f"Image generation failed: {data}", 500
+        if res.status_code == 201:
+            break
+        elif res.status_code == 429:
+            print(f"⚠️ Rate limit hit. Retrying... ({attempt+1}/{MAX_RETRIES})")
+            time.sleep(10)
+        else:
+            print("🚨 Replicate error:", data)
+            return f"Image generation failed: {data}", 500
+    else:
+        return "Image generation failed after retries.", 500
 
     
 
@@ -150,6 +160,7 @@ def generate_image(user_id):
             break
         elif result["status"] == "failed":
             return "Image generation failed.", 500
+        time.sleep(2)
 
     print(f"✅ 生成完了: {image_url}")
     return redirect(image_url)
