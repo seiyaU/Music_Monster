@@ -86,7 +86,7 @@ def callback():
 # AI画像生成エンドポイント
 @app.route("/generate/<user_id>")
 def generate_image(user_id):
-    """Spotify履歴を使ってHugging FaceでAI画像を生成"""
+    """Spotify履歴&ベース画像を使ってHugging FaceでAI画像を生成"""
 
     # セッション確認
     session_data = sessions.get(user_id)
@@ -105,42 +105,55 @@ def generate_image(user_id):
     song_name = track["name"]
     artist_name = track["artists"][0]["name"]
 
-    # ======================
-    # 🎨 Hugging Face 画像生成
-    # ======================
-    prompt = f"A fantasy creature inspired by the song '{song_name}' by {artist_name}"
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    payload = {"inputs": prompt, "options": {"wait_for_model": True}}
+    # 🎨 ベースとなるテンプレート画像を選択
+    character_animal = "cat"  # ← 実際はユーザー設定などで変えられる
+    base_image_path = f"animal_templates/{character_animal}.png"
 
-    # 🎨 Hugging Face Inference API呼び出し
-    model_id = "stabilityai/sdxl-turbo"  # ← ✅ 安定して動作する無料モデル
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-    payload = {
-        "inputs": prompt,
-        "options": {"wait_for_model": True}
+    if not os.path.exists(base_image_path):
+        return f"Template not found: {base_image_path}", 404
+
+    # 画像をバイナリで読み込み
+    with open(base_image_path, "rb") as f:
+        init_image = f.read()
+
+    # ======================
+    # 🎨 Hugging Face 画像生成（img2img）
+    # ======================
+    model_id = "stabilityai/stable-diffusion-img2img"
+    prompt = f"A fantasy creature inspired by the song '{song_name}' by {artist_name}, artistic, vivid style"
+
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}"
     }
 
-    hf_res = requests.post(
+    # multipart/form-data形式で送信
+    response = requests.post(
         f"https://api-inference.huggingface.co/models/{model_id}",
         headers=headers,
-        json=payload
+        files={
+            "image": ("base.png", init_image, "image/png")
+        },
+        data={
+            "inputs": prompt
+        }
     )
 
+    if response.status_code != 200:
+        return f"Image generation failed: {response.text}", 500
 
-    if hf_res.status_code != 200:
-        return f"Image generation failed: {hf_res.text}", 500
+    # Hugging Faceのレスポンスは画像バイナリ
+    image_bytes = response.content
 
-    # 画像を保存
-    image_bytes = hf_res.content
     os.makedirs("static/generated", exist_ok=True)
-    image_path = f"static/generated/{user_id}.png"
-    with open(image_path, "wb") as f:
+    output_path = f"static/generated/{user_id}.png"
+    with open(output_path, "wb") as f:
         f.write(image_bytes)
 
-    print(f"🎨 画像生成完了: {image_path}")
+    print(f"🎨 画像生成完了: {output_path}")
 
-    # ✅ 自動的に生成画像にリダイレクト
-    return redirect(f"/{image_path}")
+    # ✅ 自動的に生成画像を表示
+    return redirect(f"/{output_path}")
+
 
 
 # ======================
