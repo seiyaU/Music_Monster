@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect, render_template, send_from_directory
+from flask import Flask, request, jsonify, redirect, render_template, send_from_directory, url_for
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -38,6 +38,13 @@ def service_worker():
 @app.route("/login")
 def login():
     state = request.args.get("state") or str(uuid.uuid4())  
+    sp_oauth = SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope="user-read-recently-played user-read-email",
+        cache_path=None
+    )
     # ✅ 認可URLを自分で構築
     auth_url = (
         f"https://accounts.spotify.com/authorize"
@@ -48,7 +55,6 @@ def login():
         f"&state={state}"
     )
 
-    print(f"🌐 Redirecting user to Spotify login (state={state})")
     return redirect(auth_url)
 
 @app.route("/callback")
@@ -80,11 +86,27 @@ def callback():
         "expires_at": token_info["expires_at"]
     }
 
-    return jsonify({
-        "status": "success",
-        "user_id": user_id,
-        "access_token": access_token 
-  })
+    print(f"✅ 認証成功: {user_id}")
+
+    # 🎯 ログイン後に画像生成ページにリダイレクト
+    return redirect(f"/generate/{user_id}")
+
+@app.route("/generate/<user_id>")
+def generate_image(user_id):
+    """
+    仮の画像生成ページ。
+    実際はここでAI画像生成を行ってURLを返す。
+    """
+    session = sessions.get(user_id)
+    if not session:
+        return redirect("/login")
+
+    # 🎨 ここにAI画像生成または既存画像編集の処理を実装
+    # 例: CloudinaryやStableDiffusion APIなどを使う
+    image_url = f"https://dummyimage.com/512x512/000/fff.png&text={user_id}"
+
+    # 🎯 自動的に画像URLにリダイレクト
+    return redirect(image_url)
 
 @app.route("/auth-status")
 def auth_status():
