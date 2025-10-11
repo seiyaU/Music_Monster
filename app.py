@@ -122,7 +122,8 @@ def generate_image(user_id):
     }
 
     # ✅ Replicateモデルのversion IDだけを指定
-    MODEL_VERSION = "b19ac35b92b0c437c9f1a8f22a63f7aa9af08ce2d9dc58e3a7d06c204a2bdf29"  # SDXL v1.0
+    MODEL_VERSION = "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc"  # ✅ SDXL Free version
+
 
     payload = {
         "version": MODEL_VERSION,
