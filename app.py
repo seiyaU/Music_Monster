@@ -49,7 +49,6 @@ def callback():
         cache_path=None
     )
 
-    # ✅ アクセストークン取得
     token_info = sp_oauth.get_access_token(code, as_dict=True)
     access_token = token_info["access_token"]
     if not access_token:
@@ -71,7 +70,7 @@ def callback():
     return redirect(f"/generate/{user_id}")
 
 # AI画像生成エンドポイント
-@app.route("/generate/<user_id>")
+@app.route("/generate/<user_id>", methods=["GET"])
 def generate_image(user_id):
 
     session_data = sessions.get(user_id)
@@ -99,62 +98,75 @@ def generate_image(user_id):
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
     
-    image_url = f"https://{request.host}/static/{character_animal}.png"
 
-    # base64エンコード
-    with open(base_image_path, "rb") as image_file:
-        image_bytes = image_file.read()
-        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+    with open(base_image_path, "rb") as f:
+        image_b64 = base64.b64encode(f.read()).decode("utf-8")
         image_data_uri = f"data:image/png;base64,{image_b64}"
 
-        # 🎯 プロンプトを生成
     prompt = (
         f"A vivid artistic portrait of a {character_animal} inspired by the song "
         f"'{song_name}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
     )
 
-    print(f"🎵 Generating for: {song_name} by {artist_name}")
-
-    replicate_url = "https://api.replicate.com/v1/predictions"
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
     }
 
-    # ✅ Replicateモデルのversion IDだけを指定
     MODEL_VERSION = "232569243dacecab70a4475be391353ad9b42819617225848847f28752205acf"
 
-
     payload = {
-    "version": MODEL_VERSION,
-    "input": {
-        "prompt": prompt,
-        "image": image_data_uri,  # 元画像を渡す
-        "strength": 0.6,          # 0.0=完全に元画像無視、1.0=完全に元画像を維持
-        "num_outputs": 1
+        "version": MODEL_VERSION,
+        "input": {
+            "prompt": prompt,
+            "image": image_data_uri,
+            "strength": 0.6,
+            "num_outputs": 1
+        }
     }
-}
 
-    res = requests.post(replicate_url, headers=headers, json=payload)
-    data = res.json()
-
+    # ✅ 非同期でpredictionを作成
+    res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload)
     if res.status_code != 201:
+        data = res.json()
         print("🚨 Replicate error:", data)
         return f"Image generation failed: {data}", 500
 
-    # ✅ Polling（生成完了まで待機）
-    get_url = data["urls"]["get"]
-    while True:
-        result = requests.get(get_url, headers=headers).json()
-        if result["status"] == "succeeded":
-            image_url = result["output"][0]
-            break
-        elif result["status"] == "failed":
-            return "Image generation failed.", 500
-        time.sleep(2)
+    prediction = res.json()
+    prediction_id = prediction["id"]
 
-    print(f"✅ 生成完了: {image_url}")
-    return redirect(image_url)
+    # ✅ prediction_idを返してクライアントにポーリングさせる
+    return jsonify({
+        "prediction_id": prediction_id,
+        "status_url": f"/result/{prediction_id}"
+    })
+
+
+# =====================
+# 生成結果ポーリング
+# =====================
+@app.route("/result/<prediction_id>", methods=["GET"])
+def get_result(prediction_id):
+    headers = {
+        "Authorization": f"Token {REPLICATE_API_TOKEN}",
+    }
+    res = requests.get(f"https://api.replicate.com/v1/predictions/{prediction_id}", headers=headers)
+    if res.status_code != 200:
+        return f"Failed to fetch prediction: {res.text}", 500
+
+    data = res.json()
+    if data["status"] == "succeeded":
+        # 出力URLを返す
+        return jsonify({
+            "status": data["status"],
+            "image_url": data["output"][0]
+        })
+    else:
+        return jsonify({
+            "status": data["status"],
+            "image_url": None
+        })
 
 
 # =====================
