@@ -1,10 +1,9 @@
-from flask import Flask, request, redirect, jsonify, send_file, send_from_directory
+from flask import Flask, request, redirect, jsonify, send_from_directory
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
-from PIL import Image, ImageDraw, ImageFont
 import os
-import io
 import requests
+import time
 
 # ✅ 認証済みユーザー情報を保持
 sessions = {}
@@ -15,22 +14,12 @@ app = Flask(__name__)
 CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
-HF_API_KEY = os.getenv("HF_API_KEY")
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 
 @app.route("/")
 def home():
     return redirect("/login")
-
-# PWA用のファイルを提供
-@app.route("/manifest.json")
-def manifest():
-    return send_from_directory("static", "manifest.json")
-
-@app.route("/serviceWorker.js")
-def service_worker():
-    return send_from_directory("static", "serviceWorker.js")
-
 
 
 # ################# Spotify認証 #################
@@ -43,7 +32,6 @@ def login():
         scope="user-read-recently-played user-read-email",
         cache_path=None
     )
-
     return redirect(sp_oauth.get_authorize_url())
 
 @app.route("/callback")
@@ -79,8 +67,6 @@ def callback():
     }
 
     print(f"✅ 認証成功: {user_id}")
-
-    # 🎯 ログイン後に画像生成ページにリダイレクト
     return redirect(f"/generate/{user_id}")
 
 # AI画像生成エンドポイント
@@ -109,75 +95,81 @@ def generate_image(user_id):
 
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
+    
+    image_url = f"https://{request.host}/static/{character_animal}.png"
 
     with open(base_image_path, "rb") as image_file:
         image_bytes = image_file.read()
 
-    # ======================
-    # 🎨 Hugging Face 画像生成（img2img）
-    # ======================
-    model_id = "black-forest-labs/flux1-dev"
-    prompt = f"A fantasy creature inspired by the song '{song_name}' by {artist_name}, artistic, vivid style"
-    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    # 🎯 プロンプトを生成
+    prompt = (
+        f"A vivid artistic portrait of a {character_animal} inspired by the song "
+        f"'{song_name}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
+    )
 
-    files = {
-        "image": ("image.png", image_bytes, "image/png"),
+    print(f"🎵 Generating for: {song_name} by {artist_name}")
+    
+    replicate_url = "https://api.replicate.com/v1/predictions"
+    headers = {
+        "Authorization": f"Token {REPLICATE_API_TOKEN}",
+        "Content-Type": "application/json",
     }
-    data = {"inputs": prompt, "options": {"wait_for_model": True}}
-
-    hf_res = requests.post(
-        f"https://api-inference.huggingface.co/models/{model_id}",
-        headers=headers,
-        data=data,
-        files=files
-    )
-
-
-
-
-
-
-    # multipart/form-data形式で送信
-    # 🎨 Hugging Face Inference API呼び出し
-    response = requests.post(
-        f"https://api-inference.huggingface.co/models/{model_id}",
-        headers=headers,
-        files={
-            "image": ("base.png", image_bytes, "image/png")
-        },
-        data={
-            "inputs": prompt
+    payload = {
+        # ✅ SDXLのimg2img対応バージョン
+        "version": "e246c96c7b59e74a3e4f8a77edb8f1775ff2b3c9b1e1fce6e5da8f5c7b9e2f8d",
+        "input": {
+            "prompt": prompt,
+            "image": image_url,
+            "strength": 0.6,  # 元画像をどれくらい残すか（0.2〜0.8）
+            "scheduler": "K_EULER",
         }
-    )
+    }
 
-    print("📡 HF status:", hf_res.status_code)
-    if hf_res.status_code != 200:
-        print("📡 HF response text:", hf_res.text)
-        return f"Image generation failed: {hf_res.text}", 500
-
-    # 🎨 生成画像を保存
-    os.makedirs("static/generated", exist_ok=True)
-    image_path = f"static/generated/{user_id}.png"
-    with open(image_path, "wb") as f:
-        f.write(hf_res.content)
-
-    print(f"🎨 画像生成完了: {image_path}")
-
-    return redirect(f"/{image_path}")
+    res = requests.post(replicate_url, headers=headers, json=payload)
+    data = res.json()
 
 
+    if res.status_code != 201:
+        print("🚨 Replicate error:", data)
+        return jsonify({"error": data}), 500
 
-# ======================
-# static画像配信
-# ======================
+    get_url = data["urls"]["get"]
+
+    # Polling (生成完了まで待機)
+    while True:
+        result = requests.get(get_url, headers=headers).json()
+        status = result["status"]
+
+        if status == "succeeded":
+            image_url = result["output"][0]
+            print(f"✅ 生成完了: {image_url}")
+            return redirect(image_url)
+
+        elif status == "failed":
+            print("❌ Generation failed")
+            return "Image generation failed.", 500
+
+        time.sleep(2)  # 2秒ごとにチェック
+
+
+# =====================
+# PWA用ファイル・静的配信
+# =====================
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("static", "manifest.json")
+
+@app.route("/serviceWorker.js")
+def service_worker():
+    return send_from_directory("static", "serviceWorker.js")
+
 @app.route("/static/<path:filename>")
 def serve_static(filename):
     return send_from_directory("static", filename)
 
 
-# ======================
+# =====================
 # サーバー起動
-# ======================
+# =====================
 if __name__ == "__main__":
-    os.makedirs("static/generated", exist_ok=True)
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
