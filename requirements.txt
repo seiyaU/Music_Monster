@@ -1,7 +1,8 @@
-flask
 flask_cors
-spotipy
-gunicorn
+Flask==3.0.3
+spotipy==2.23.0
+requests==2.32.3
+gunicorn==23.0.0
 
 
 

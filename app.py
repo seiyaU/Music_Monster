@@ -28,13 +28,9 @@ def manifest():
 def service_worker():
     return send_from_directory("static", "serviceWorker.js")
 
-
-
-
 @app.route("/login")
 def login():
     state = request.args.get("state") or str(uuid.uuid4())  
-
     # ✅ 認可URLを自分で構築
     auth_url = (
         f"https://accounts.spotify.com/authorize"
@@ -52,9 +48,6 @@ def login():
 def callback():
     code = request.args.get("code")
     state = request.args.get("state")
-
-    if not code:
-        return jsonify({"error": "No authorization code provided"}), 400
 
     sp_oauth = SpotifyOAuth(
         client_id=CLIENT_ID,
@@ -74,81 +67,35 @@ def callback():
     user_id = user["id"]
 
     # ✅ ユーザー情報を state / user_id 両方に保存
-    session_data = {
-        "user_id": user_id,
+    sessions[user_id] = {
         "access_token": token_info["access_token"],
-        "refresh_token": token_info.get("refresh_token"),
-        "expires_at": token_info.get("expires_at"),
-        "authenticated": True
+        "refresh_token": token_info["refresh_token"],
+        "expires_at": token_info["expires_at"]
     }
-
-    sessions[state] = session_data
-    sessions[user_id] = session_data 
-    print(f"✅ Authorized: {user_id} (state={state})")
 
     return jsonify({
         "status": "success",
-        "user_id": user_id
-    })
-
+        "user_id": user_id,
+        "access_token": access_token 
+  })
 
 @app.route("/auth-status")
 def auth_status():
     state = request.args.get("state")
-    if state in sessions and sessions[state].get("authenticated"):
-        return jsonify({
-            "authenticated": True,
-            "user_id": sessions[state]["user_id"]
-        })
+    if state and state in sessions:
+        return jsonify({"authenticated": True, "user_id": sessions[state]["user_id"]})
     return jsonify({"authenticated": False}), 404
-
 
 @app.route("/recent/<user_id>")
 def recent_tracks(user_id):
     # ✅ user_idキーでセッションを取得
     session_data = sessions.get(user_id)
-
-    # 🔸 セッションがない場合はstateキーも検索
     if not session_data:
-        for v in sessions.values():
-            if isinstance(v, dict) and v.get("user_id") == user_id:
-                session_data = v
-                break
-
-    # 🔸 それでも見つからない場合はログインへリダイレクト
-    if not session_data or "access_token" not in session_data:
-        print(f"⚠️ トークン未登録: {user_id} → /login にリダイレクトします")
-        return redirect(f"/login?state={uuid.uuid4()}")
+        return redirect("/login")
 
     access_token = session_data["access_token"]
-
-    # 🎯 トークンの有効期限切れをチェックして自動リフレッシュ
-    if "expires_at" in session_data and time() > session_data["expires_at"]:
-        print(f"🔁 トークン期限切れ、リフレッシュ中: {user_id}")
-        sp_oauth = SpotifyOAuth(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            redirect_uri=REDIRECT_URI,
-            scope="user-read-recently-played user-read-email"
-        )
-        try:
-            token_info = sp_oauth.refresh_access_token(session_data["refresh_token"])
-            session_data["access_token"] = token_info["access_token"]
-            session_data["expires_at"] = token_info["expires_at"]
-            sessions[user_id] = session_data
-            access_token = token_info["access_token"]
-            print("✅ トークン更新成功")
-        except Exception as e:
-            print(f"❌ トークン更新失敗: {e}")
-            return redirect(f"/login?state={uuid.uuid4()}")
-
-    # 🎯 Spotify API呼び出し
     sp = Spotify(auth=access_token)
-    try:
-        recent = sp.current_user_recently_played(limit=50)
-    except Exception as e:
-        print(f"❌ Spotify API エラー: {e}")
-        return redirect(f"/login?state={uuid.uuid4()}")
+    recent = sp.current_user_recently_played(limit=50)
 
     # 🎵 結果を構築
     results = []
