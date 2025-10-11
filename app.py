@@ -112,11 +112,20 @@ def generate_image(user_id):
     headers = {"Authorization": f"Bearer {HF_API_KEY}"}
     payload = {"inputs": prompt, "options": {"wait_for_model": True}}
 
+    # 🎨 Hugging Face Inference API呼び出し
+    model_id = "stabilityai/sdxl-turbo"  # ← ✅ 安定して動作する無料モデル
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    payload = {
+        "inputs": prompt,
+        "options": {"wait_for_model": True}
+    }
+
     hf_res = requests.post(
-        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2",
+        f"https://api-inference.huggingface.co/models/{model_id}",
         headers=headers,
         json=payload
     )
+
 
     if hf_res.status_code != 200:
         return f"Image generation failed: {hf_res.text}", 500
