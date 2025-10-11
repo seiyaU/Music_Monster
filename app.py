@@ -127,6 +127,7 @@ def generate_image(user_id):
     }
 
     # multipart/form-data形式で送信
+    # 🎨 Hugging Face Inference API呼び出し
     response = requests.post(
         f"https://api-inference.huggingface.co/models/{model_id}",
         headers=headers,
@@ -137,6 +138,14 @@ def generate_image(user_id):
             "inputs": prompt
         }
     )
+
+    # デバッグ用ログ出力
+    print("📡 HF status:", response.status_code)
+    print("📡 HF headers:", response.headers)
+    try:
+        print("📡 HF response text:", response.text[:500])
+    except Exception:
+        pass
 
     if response.status_code != 200:
         return f"Image generation failed: {response.text}", 500
