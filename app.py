@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 import requests
 import time
+import base64
 
 # ✅ 認証済みユーザー情報を保持
 sessions = {}
@@ -89,6 +90,8 @@ def generate_image(user_id):
     song_name = track["name"]
     artist_name = track["artists"][0]["name"]
 
+    print(f"🎵 Generating remix for: {song_name} by {artist_name}")
+
     # 🎨 ベースとなるテンプレート画像を選択
     character_animal = "cat"  # ← 実際はユーザー設定などで変えられる
     base_image_path = f"animal_templates/{character_animal}.png"
@@ -98,8 +101,11 @@ def generate_image(user_id):
     
     image_url = f"https://{request.host}/static/{character_animal}.png"
 
+    # base64エンコード
     with open(base_image_path, "rb") as image_file:
         image_bytes = image_file.read()
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        image_data_uri = f"data:image/png;base64,{image_b64}"
 
     # 🎯 プロンプトを生成
     prompt = (
@@ -114,14 +120,14 @@ def generate_image(user_id):
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
     }
+
+    # ✅ SDXL Image-to-Image モード
     payload = {
-        # ✅ SDXLのimg2img対応バージョン
-        "version": "e246c96c7b59e74a3e4f8a77edb8f1775ff2b3c9b1e1fce6e5da8f5c7b9e2f8d",
+        "version": "b19ac35b92b0c437c9f1a8f22a63f7aa9af08ce2d9dc58e3a7d06c204a2bdf29",  # SDXL
         "input": {
             "prompt": prompt,
-            "image": image_url,
-            "strength": 0.6,  # 元画像をどれくらい残すか（0.2〜0.8）
-            "scheduler": "K_EULER",
+            "image": image_data_uri,  # ベース画像を渡す
+            "strength": 0.6           # 原画像をどれくらい保持するか（0.0〜1.0）
         }
     }
 
@@ -131,25 +137,22 @@ def generate_image(user_id):
 
     if res.status_code != 201:
         print("🚨 Replicate error:", data)
-        return jsonify({"error": data}), 500
+        return f"Image generation failed: {data}", 500
 
-    get_url = data["urls"]["get"]
+    
 
     # Polling (生成完了まで待機)
+    get_url = data["urls"]["get"]
     while True:
         result = requests.get(get_url, headers=headers).json()
-        status = result["status"]
-
-        if status == "succeeded":
+        if result["status"] == "succeeded":
             image_url = result["output"][0]
-            print(f"✅ 生成完了: {image_url}")
-            return redirect(image_url)
-
-        elif status == "failed":
-            print("❌ Generation failed")
+            break
+        elif result["status"] == "failed":
             return "Image generation failed.", 500
 
-        time.sleep(2)  # 2秒ごとにチェック
+    print(f"✅ 生成完了: {image_url}")
+    return redirect(image_url)
 
 
 # =====================
@@ -163,6 +166,13 @@ def manifest():
 def service_worker():
     return send_from_directory("static", "serviceWorker.js")
 
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    return send_from_directory("static", filename)
+
+# ======================
+# static画像配信
+# ======================
 @app.route("/static/<path:filename>")
 def serve_static(filename):
     return send_from_directory("static", filename)
