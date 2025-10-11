@@ -121,38 +121,26 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    # ✅ モデルとバージョンを分けて指定（ここが重要！）
-    MODEL_ID = "stability-ai/sdxl"
-    MODEL_VERSION = "9d21e5f07d274a46a31a1e6b264b4006d1af31a42ceef3f0f23e223e9b6a7e63"
+    # ✅ Replicateモデルのversion IDだけを指定
+    MODEL_VERSION = "b19ac35b92b0c437c9f1a8f22a63f7aa9af08ce2d9dc58e3a7d06c204a2bdf29"  # SDXL v1.0
 
     payload = {
-        "model": MODEL_ID,
         "version": MODEL_VERSION,
         "input": {
             "prompt": prompt,
-            "image": image_data_uri,
+            "image": image_data_uri,  # ベース画像
             "strength": 0.6
         }
     }
 
-    # ✅ レート制限対応付きでリクエストを送信
-    MAX_RETRIES = 3
-    for attempt in range(MAX_RETRIES):
-        res = requests.post(replicate_url, headers=headers, json=payload)
-        data = res.json()
+    res = requests.post(replicate_url, headers=headers, json=payload)
+    data = res.json()
 
-        if res.status_code == 201:
-            break
-        elif res.status_code == 429:
-            print(f"⚠️ Rate limit hit. Retrying... ({attempt+1}/{MAX_RETRIES})")
-            time.sleep(10)
-        else:
-            print("🚨 Replicate error:", data)
-            return f"Image generation failed: {data}", 500
-    else:
-        return "Image generation failed after retries.", 500
+    if res.status_code != 201:
+        print("🚨 Replicate error:", data)
+        return f"Image generation failed: {data}", 500
 
-    # Polling (生成完了まで待機)
+    # ✅ Polling（生成完了まで待機）
     get_url = data["urls"]["get"]
     while True:
         result = requests.get(get_url, headers=headers).json()
