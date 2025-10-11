@@ -170,13 +170,6 @@ def service_worker():
 def serve_static(filename):
     return send_from_directory("static", filename)
 
-# ======================
-# static画像配信
-# ======================
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    return send_from_directory("static", filename)
-
 
 # =====================
 # サーバー起動
