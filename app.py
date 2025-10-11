@@ -110,8 +110,8 @@ def generate_image(user_id):
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
 
-    with open(base_image_path, "rb") as f:
-        init_image = f.read()
+    with open(base_image_path, "rb") as image_file:
+        image_bytes = image_file.read()
 
     # ======================
     # 🎨 Hugging Face 画像生成（img2img）
