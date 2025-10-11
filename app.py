@@ -122,17 +122,18 @@ def generate_image(user_id):
     }
 
     # ✅ Replicateモデルのversion IDだけを指定
-    MODEL_VERSION = "7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc"  # ✅ SDXL Free version
+    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
 
 
     payload = {
-        "version": MODEL_VERSION,
-        "input": {
-            "prompt": prompt,
-            "image": image_data_uri,  # ベース画像
-            "strength": 0.6
-        }
+    "version": MODEL_VERSION,
+    "input": {
+        "prompt": prompt,
+        "image": image_data_uri,  # 元画像を渡す
+        "strength": 0.6,          # 0.0=完全に元画像無視、1.0=完全に元画像を維持
+        "num_outputs": 1
     }
+}
 
     res = requests.post(replicate_url, headers=headers, json=payload)
     data = res.json()
