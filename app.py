@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, jsonify, send_from_directory
+from flask import Flask, request, redirect, jsonify, send_from_directory, render_template
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
@@ -70,7 +70,7 @@ def callback():
     return redirect(f"/generate/{user_id}")
 
 # AI画像生成エンドポイント
-@app.route("/generate/<user_id>", methods=["GET"])
+@app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
 
     session_data = sessions.get(user_id)
@@ -135,12 +135,14 @@ def generate_image(user_id):
 
     prediction = res.json()
     prediction_id = prediction["id"]
-
-    # ✅ prediction_idを返してクライアントにポーリングさせる
     return jsonify({
         "prediction_id": prediction_id,
         "status_url": f"/result/{prediction_id}"
     })
+    
+@app.route("/generate/<user_id>")
+def generate_page(user_id):
+    return render_template("generate.html")
 
 
 # =====================
