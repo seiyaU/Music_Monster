@@ -171,9 +171,7 @@ def generate_image(user_id):
             "prompt": prompt,
             "image": image_data_uri,
             "strength": 0.6,
-            "num_outputs": 1,
-            "aspect_ratio": "3:4"
-
+            "num_outputs": 1
         }
     }
 
