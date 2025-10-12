@@ -147,6 +147,7 @@ def generate_image(user_id):
     prompt = (
         f"The creature influenced by {base_image_path}."
         f"This has atmosphere of {influenced_word} and designed like trading card monster 'Magic: The Gathering'."
+        f"This is also spooky and creepy."
     )
     print(prompt)
 
