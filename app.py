@@ -148,6 +148,7 @@ def generate_image(user_id):
         f"The creature based on {base_image_path}."
         f"This has atmosphere of {influenced_word} and designed like monsters in SF films."
         f"This is also spooky and creepy."
+        f"This grabs sword in their hands."
     )
     print(prompt)
 
