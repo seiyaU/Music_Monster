@@ -1,10 +1,12 @@
+import base64
+import os
+import random
+import requests
 from flask import Flask, request, redirect, jsonify, send_from_directory, render_template
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
-import os
-import requests
 import time
-import base64
+import yaml
 
 # ✅ 認証済みユーザー情報を保持
 sessions = {}
@@ -21,7 +23,6 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 @app.route("/")
 def home():
     return redirect("/login")
-
 
 # ################# Spotify認証 #################
 @app.route("/login")
@@ -65,7 +66,6 @@ def callback():
         "refresh_token": token_info["refresh_token"],
         "expires_at": token_info["expires_at"]
     }
-
     print(f"✅ 認証成功: {user_id}")
     return redirect(f"/generate/{user_id}")
 
@@ -85,29 +85,72 @@ def generate_image(user_id):
     if "items" not in recent or len(recent["items"]) == 0:
         return "No recent tracks found.", 404
 
-    track = recent["items"][0]["track"]
-    song_name = track["name"]
-    artist_name = track["artists"][0]["name"]
-
-    print(f"🎵 Generating remix for: {song_name} by {artist_name}")
-
     # 🎨 ベースとなるテンプレート画像を選択
-    character_animal = "cat"  # ← 実際はユーザー設定などで変えられる
+    definition_score = 0
+    character_animal = ""
+    influenced_word = ""
+    influenced_word_box = []
+
+    with open("data/genre_weights.yaml", "r", encoding="utf-8") as f:
+        genre_weights = yaml.safe_load(f)
+
+    print("\n🎵 最近再生した曲:")
+    for idx, track in enumerate(recent["items"], 1):
+        artist_info = sp.artist(track["artists"][0]["id"])
+        genre = artist_info.get("genres", [])
+        print(f"{idx}. {track['items'][0]['track']} / {track['artists'][0]['name']} ({', '.join(genre)})")
+        print({track["album"]["images"][0]["url"]})
+        influenced_word_box.append(track["artists"][0]["name"])
+
+        if track['artists'][0]['name'] == "The Beatles":
+            definition_score += 50
+
+        for i in genre:
+            weight = genre_weights.get(i, 0)  # デフォルト値0
+            definition_score += weight
+            influenced_word_box.append(i)
+            print(f"   - {i}: {weight}")
+
+    # 動物の確定
+    if definition_score <= 500:
+        character_animal = "bug"
+    elif definition_score <= 1000:
+        character_animal = "fish"
+    elif definition_score <= 1500:
+        character_animal = "octopus"    
+    elif definition_score <= 2000:
+        character_animal = "crab"
+    elif definition_score <= 3000:
+        character_animal = "frog"
+    elif definition_score <= 4000:
+        character_animal = "snake"
+    elif definition_score <= 8000:
+        character_animal = "horse"
+    elif definition_score <= 9000:
+        character_animal = "dog"
+    elif definition_score <= 13000:
+        character_animal = "cat"
+    else:
+        character_animal = "dragon"
+    
     base_image_path = f"animal_templates/{character_animal}.png"
+    influenced_word = random.choice(influenced_word_box)
+
+    print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
+    print(character_animal)
+    print(influenced_word)
+
+    prompt = (
+        f"A vivid artistic portrait of a {character_animal} inspired by the song "
+        f"'{influenced_word}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
+    )
 
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
     
-
-
     with open(base_image_path, "rb") as f:
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
-        image_data_uri = f"data:image/png;base64,{image_b64}"
-
-    prompt = (
-        f"A vivid artistic portrait of a {character_animal} inspired by the song "
-        f"'{song_name}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
-    )
+        image_data_uri = f"data:image/png;base64,{image_b64}"  
 
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
@@ -144,7 +187,6 @@ def generate_image(user_id):
 def generate_page(user_id):
     return render_template("generate.html")
 
-
 # =====================
 # 生成結果ポーリング
 # =====================
@@ -169,7 +211,6 @@ def get_result(prediction_id):
             "status": data["status"],
             "image_url": None
         })
-
 
 # =====================
 # PWA用ファイル・静的配信
