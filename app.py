@@ -95,14 +95,19 @@ def generate_image(user_id):
         genre_weights = yaml.safe_load(f)
 
     print("\n🎵 最近再生した曲:")
-    for idx, track in enumerate(recent["items"], 1):
-        artist_info = sp.artist(track["artists"][0]["id"])
+    for idx, item in enumerate(recent["items"], 1):
+        track = item["track"]
+        artist = item["artists"][0]
+        artist_info = sp.artist(artist["id"])
         genre = artist_info.get("genres", [])
-        print(f"{idx}. {track['items'][0]['track']} / {track['artists'][0]['name']} ({', '.join(genre)})")
-        print({track["album"]["images"][0]["url"]})
-        influenced_word_box.append(track["artists"][0]["name"])
 
-        if track['artists'][0]['name'] == "The Beatles":
+        print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
+        print({track["album"]["images"][0]["url"]})
+
+        influenced_word_box.append(artist)
+        influenced_word_box.append(genre)
+
+        if artist["name"] == "The Beatles":
             definition_score += 50
 
         for i in genre:
