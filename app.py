@@ -104,17 +104,17 @@ def generate_image(user_id):
         print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
         print({track["album"]["images"][0]["url"]})
 
+        influenced_word_box.append(track)
         influenced_word_box.append(artist)
         influenced_word_box.append(genre)
-
-        if artist["name"] == "The Beatles":
-            definition_score += 50
-
         for i in genre:
             weight = genre_weights.get(i, 0)  # デフォルト値0
             definition_score += weight
             influenced_word_box.append(i)
             print(f"   - {i}: {weight}")
+
+        if artist["name"] == "The Beatles":
+            definition_score += 50
 
     # 動物の確定
     if definition_score <= 500:
@@ -146,8 +146,8 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"A vivid artistic portrait of a {character_animal} inspired by the song "
-        f"'{influenced_word}' by {artist_name}, in a fantasy vibrant style, cinematic lighting"
+        f"generate the image of creature based on {base_image_path}."
+        f"This is influenced by {influenced_word} and designed like trading card monster."
     )
 
     if not os.path.exists(base_image_path):
