@@ -97,7 +97,7 @@ def generate_image(user_id):
     print("\n🎵 最近再生した曲:")
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
-        artist = item["artists"][0]
+        artist = item["track"]["artists"][0]
         artist_info = sp.artist(artist["id"])
         genre = artist_info.get("genres", [])
 
