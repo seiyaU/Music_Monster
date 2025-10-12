@@ -145,7 +145,7 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"generate the image of creature based on {base_image_path}."
+        f"The creature influenced by {base_image_path}."
         f"This has atmosphere of {influenced_word} and designed like trading card monster 'Magic: The Gathering'."
     )
     print(prompt)
@@ -162,7 +162,7 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "39c0be5d2e96df975da94e8923535733d81179abed5f37c999afc5f7c33bf04e"
+    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
 
     payload = {
         "version": MODEL_VERSION,
