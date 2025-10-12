@@ -106,7 +106,6 @@ def generate_image(user_id):
 
         influenced_word_box.append(track)
         influenced_word_box.append(artist)
-        influenced_word_box.append(genre)
         for i in genre:
             weight = genre_weights.get(i, 0)  # デフォルト値0
             definition_score += weight
@@ -149,6 +148,7 @@ def generate_image(user_id):
         f"generate the image of creature based on {base_image_path}."
         f"This is influenced by {influenced_word} and designed like trading card monster."
     )
+    print(prompt)
 
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
