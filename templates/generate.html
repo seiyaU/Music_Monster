@@ -24,8 +24,8 @@
   </style>
 </head>
 <body>
-  <h2>🎵 曲にインスパイアされた画像を生成中...</h2>
-  <p id="status">しばらくお待ちください。</p>
+  <h2>GENERATING...</h2>
+  <p id="status">Wait a moment...</p>
   <img id="output-image" style="display:none" />
 
   <script>
@@ -40,7 +40,7 @@
         const statusUrl = data.status_url;
         pollStatus(statusUrl);
       } catch (e) {
-        document.getElementById("status").textContent = "生成開始に失敗しました。";
+        document.getElementById("status").textContent = "Failed to start generation.";
         console.error(e);
       }
     }
@@ -54,13 +54,13 @@
         const data = await res.json();
 
         if (data.status === "succeeded") {
-          statusText.textContent = "✅ 画像生成が完了しました！";
+          statusText.textContent = "✅ Image generation completed!";
           imageEl.src = data.image_url;
           imageEl.style.display = "block";
         } else if (data.status === "failed") {
-          statusText.textContent = "❌ 生成に失敗しました。";
+          statusText.textContent = "❌ Generation failed.";
         } else {
-          statusText.textContent = `⏳ 状態: ${data.status}...`;
+          statusText.textContent = `⏳ Status: ${data.status}...`;
           setTimeout(check, 3000);
         }
       }
