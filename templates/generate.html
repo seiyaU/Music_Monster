@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>🎨 Generating Image...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f4f4f4;
+      padding-top: 80px;
+    }
+    #status {
+      font-size: 18px;
+      color: #444;
+    }
+    img {
+      margin-top: 20px;
+      max-width: 90%;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h2>🎵 曲にインスパイアされた画像を生成中...</h2>
+  <p id="status">しばらくお待ちください。</p>
+  <img id="output-image" style="display:none" />
+
+  <script>
+    async function startGeneration() {
+      try {
+        // 現在のURLからuser_idを抽出
+        const userId = window.location.pathname.split("/").pop();
+        const res = await fetch(`/generate_api/${userId}`);
+        const data = await res.json();
+        console.log("Prediction created:", data);
+
+        const statusUrl = data.status_url;
+        pollStatus(statusUrl);
+      } catch (e) {
+        document.getElementById("status").textContent = "生成開始に失敗しました。";
+        console.error(e);
+      }
+    }
+
+    async function pollStatus(url) {
+      const statusText = document.getElementById("status");
+      const imageEl = document.getElementById("output-image");
+
+      async function check() {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "succeeded") {
+          statusText.textContent = "✅ 画像生成が完了しました！";
+          imageEl.src = data.image_url;
+          imageEl.style.display = "block";
+        } else if (data.status === "failed") {
+          statusText.textContent = "❌ 生成に失敗しました。";
+        } else {
+          statusText.textContent = `⏳ 状態: ${data.status}...`;
+          setTimeout(check, 3000);
+        }
+      }
+
+      check();
+    }
+
+    startGeneration();
+  </script>
+</body>
+</html>
