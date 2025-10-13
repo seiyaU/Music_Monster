@@ -157,7 +157,7 @@ def generate_image(user_id):
         return f"Template not found: {base_image_path}", 404
     
 
-    
+
     img = Image.open(base_image_path)
 
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
@@ -178,7 +178,7 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
+    MODEL_VERSION = "ad9d7879fbffa2874e1d909d1d37d9bc682889cc65b31f7bb00d2362619f194a"
 
     payload = {
         "version": MODEL_VERSION,
