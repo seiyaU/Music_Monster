@@ -139,10 +139,6 @@ def generate_image(user_id):
     else:
         character_animal = "dragon"
 
-    #TEST
-    character_animal = "crab"
-
-
     base_image_path = f"animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
 
@@ -151,9 +147,9 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"The creature in {base_image_path} comes from a dark and mysterious world."
-        f"This has dark atmosphere and armor influenced by the word of {influenced_word}, "
-        f"designed like creepy monsters in SF or horror films."
+        f"The creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
+        f"It is influenced by the word of {influenced_word}"
+        f"and designed like creepy monsters in SF or horror films."
     )
     print(prompt)
 
