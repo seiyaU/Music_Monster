@@ -104,8 +104,8 @@ def generate_image(user_id):
         print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
         print({track["album"]["images"][0]["url"]})
 
-        influenced_word_box.append(track)
-        influenced_word_box.append(artist)
+        influenced_word_box.append(track['name'])
+        influenced_word_box.append(artist['name'])
         for i in genre:
             weight = genre_weights.get(i, 0)  # デフォルト値0
             definition_score += weight
@@ -145,9 +145,9 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"The creature in {base_image_path} is standing by their two legs and grabs a sword in its hands."
+        f"The creature same as {base_image_path}."
         f"This has dark atmosphere and has information relevant to the word of {influenced_word}, "
-        f"designed like monsters in SF or horror films."
+        f"designed like creepy monsters in SF or horror films."
     )
     print(prompt)
 
