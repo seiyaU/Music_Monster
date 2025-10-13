@@ -168,13 +168,13 @@ def generate_image(user_id):
     # Replicateクライアント初期化
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
+    MODEL_VERSION = "c7b2c64602f10dcb6d9a0e5406a3b3b408e7b91bdb07bb935dd9ebc1633b7a4a"
 
     prediction = replicate_client.predictions.create(
         version=MODEL_VERSION,
         input={
             "prompt": prompt,
-            "image": image_url,  # 直接URLを渡す
+            "image": image_url,
             "strength": 0.4,
             "num_outputs": 1,
             "width": 512,
