@@ -215,9 +215,6 @@ def generate_page(user_id):
 @app.route("/result/<prediction_id>", methods=["GET"])
 def get_result(prediction_id):
 
-    print("🧾 Replicate result data:", data)
-
-
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
     }
@@ -226,6 +223,8 @@ def get_result(prediction_id):
         return f"Failed to fetch prediction: {res.text}", 500
 
     data = res.json()
+    print("🧾 Replicate result data:", data)  
+
     if data["status"] == "succeeded":
         # 出力URLを返す
         return jsonify({
