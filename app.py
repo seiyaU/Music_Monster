@@ -1,6 +1,8 @@
 import base64
+import io
 import os
 import random
+import replicate
 import requests
 from flask import Flask, request, redirect, jsonify, send_from_directory, render_template
 from spotipy import Spotify
@@ -149,45 +151,54 @@ def generate_image(user_id):
         f"This has dark atmosphere and has information relevant to the word of {influenced_word}, "
         f"designed like monsters in SF or horror films."
     )
-    print(prompt)
+    print(f"🧠 Prompt: {prompt}")
 
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
     
+    # 🧩 Replicate非同期生成
+    replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
+    
     with open(base_image_path, "rb") as f:
-        image_b64 = base64.b64encode(f.read()).decode("utf-8")
-        image_data_uri = f"data:image/png;base64,{image_b64}"  
+        image_bytes = io.BytesIO(f.read())
 
-    headers = {
-        "Authorization": f"Token {REPLICATE_API_TOKEN}",
-        "Content-Type": "application/json",
-    }
 
-    MODEL_VERSION = "6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382"
-
-    payload = {
-        "version": MODEL_VERSION,
-        "input": {
+    print("🚀 画像生成リクエスト送信中...")
+    prediction = replicate_client.predictions.create(
+        version="6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382",  # SDXL
+        input={
             "prompt": prompt,
-            "image": image_data_uri,
+            "image": image_bytes,
             "strength": 0.6,
-            "num_outputs": 1
-        }
-    }
+            "num_outputs": 1,
+            "aspect_ratio": "3:4"
+        },
+    )
 
-    # ✅ 非同期でpredictionを作成
-    res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload)
-    if res.status_code != 201:
-        data = res.json()
-        print("🚨 Replicate error:", data)
-        return f"Image generation failed: {data}", 500
+    prediction_id = prediction.id
+    print(f"🕒 Prediction ID: {prediction_id}")
 
-    prediction = res.json()
-    prediction_id = prediction["id"]
-    return jsonify({
-        "prediction_id": prediction_id,
-        "status_url": f"/result/{prediction_id}"
-    })
+    # 🔁 Pollingして結果待ち（最大60秒）
+    timeout = time.time() + 60
+    while time.time() < timeout:
+        prediction = replicate_client.predictions.get(prediction_id)
+        status = prediction.status
+        if status == "succeeded":
+            output_url = prediction.output[0]
+            print(f"✅ 生成成功: {output_url}")
+            return jsonify({
+                "status": "succeeded",
+                "image_url": output_url
+            })
+        elif status == "failed":
+            print("❌ Replicate側で失敗")
+            return jsonify({"status": "failed", "image_url": None})
+        time.sleep(3)
+
+    # ⏰ タイムアウト時
+    print("⚠️ タイムアウト: 60秒経過")
+    return jsonify({"status": "timeout", "image_url": None})
+
     
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
