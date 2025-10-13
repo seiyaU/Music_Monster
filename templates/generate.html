@@ -6,20 +6,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh; /* 画面全体を使う */
+      margin: 0;
+      background-color: #111;
+      color: white;
       text-align: center;
+      font-family: 'Inter', sans-serif;
       background: #459e5d;
       padding-top: 80px;
     }
     #status {
       font-size: 18px;
-      color: #444;
+      font-size: 1.2rem;
+      color: #ccc;
     }
     img {
-      margin-top: 20px;
-      max-width: 90%;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: none;
+      max-width: 90vw;  /* スマホでもはみ出さない */
+      max-height: 80vh;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+      object-fit: contain;
     }
   </style>
 </head>
