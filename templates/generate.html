@@ -21,70 +21,40 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      background-color: #4caf50;
+      color: white;
+    }
   </style>
 </head>
 <body>
-  <h2>GENERATING...</h2>
-  <p id="status">Wait a moment...</p>
+  <h2>GENERATING YOUR MUSIC MONSTER...</h2>
+  <p id="status">少々お待ちください…</p>
   <img id="output-image" style="display:none" />
+  <br>
+  <button id="regenerate-btn" style="display:none">再生成</button>
 
   <script>
     async function startGeneration() {
-      const statusEl = document.getElementById("status");
-
-      try {
-        // ✅ user_idを正しく取得
-        const parts = window.location.pathname.split("/");
-        const userId = parts[parts.length - 1] || parts[parts.length - 2]; // ←ここが修正ポイント
-        if (!userId || userId === "undefined") {
-          throw new Error("Invalid user ID in URL");
-        }
-
-        console.log("🎯 User ID:", userId);
-
-        const res = await fetch(`/generate_api/${userId}`);
-        if (!res.ok) {
-          throw new Error("API request failed");
-        }
-
-        const data = await res.json();
-        console.log("📦 Prediction created:", data);
-
-        if (!data.status_url) {
-          throw new Error("No status_url returned from API");
-        }
-
-        pollStatus(data.status_url);
-      } catch (e) {
-        console.error("❌ Generation failed:", e);
-        statusEl.textContent = "❌ Generation failed to start.";
-      }
-    }
-
-    async function pollStatus(url) {
       const statusText = document.getElementById("status");
       const imageEl = document.getElementById("output-image");
+      const regenBtn = document.getElementById("regenerate-btn");
 
-      async function check() {
-        const res = await fetch(url);
+      try {
+        statusText.textContent = "🚀 画像生成リクエスト送信中…";
+
+        // URLからuser_idを取得
+        const userId = window.location.pathname.split("/").pop();
+        const res = await fetch(`/generate_api/${userId}`);
         const data = await res.json();
+        console.log("Generation result:", data);
 
-        if (data.status === "succeeded") {
-          statusText.textContent = "✅ Image generation completed!";
-          imageEl.src = data.image_url;
-          imageEl.style.display = "block";
-        } else if (data.status === "failed") {
-          statusText.textContent = "❌ Generation failed.";
-        } else {
-          statusText.textContent = `⏳ Status: ${data.status}...`;
-          setTimeout(check, 3000);
-        }
-      }
-
-      check();
-    }
-
-    startGeneration();
-  </script>
-</body>
-</html>
+        if (data.status === "succeeded" && data.image_url) {
+          statusText.textContent = "✅ 画像生成完了！";
+          imageE
