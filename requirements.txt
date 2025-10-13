@@ -2,6 +2,5 @@ Flask==3.0.3
 requests==2.32.3
 spotipy==2.24.0
 gunicorn==23.0.0
-Pillow==10.3.0
 PyYAML==6.0.1
 replicate==0.24.0
