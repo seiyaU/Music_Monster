@@ -30,18 +30,34 @@
 
   <script>
     async function startGeneration() {
-      try {
-        // 現在のURLからuser_idを抽出
-        const userId = window.location.pathname.split("/").pop();
-        const res = await fetch(`/generate_api/${userId}`);
-        const data = await res.json();
-        console.log("Prediction created:", data);
+      const statusEl = document.getElementById("status");
 
-        const statusUrl = data.status_url;
-        pollStatus(statusUrl);
+      try {
+        // ✅ user_idを正しく取得
+        const parts = window.location.pathname.split("/");
+        const userId = parts[parts.length - 1] || parts[parts.length - 2]; // ←ここが修正ポイント
+        if (!userId || userId === "undefined") {
+          throw new Error("Invalid user ID in URL");
+        }
+
+        console.log("🎯 User ID:", userId);
+
+        const res = await fetch(`/generate_api/${userId}`);
+        if (!res.ok) {
+          throw new Error("API request failed");
+        }
+
+        const data = await res.json();
+        console.log("📦 Prediction created:", data);
+
+        if (!data.status_url) {
+          throw new Error("No status_url returned from API");
+        }
+
+        pollStatus(data.status_url);
       } catch (e) {
-        document.getElementById("status").textContent = "Failed to start generation.";
-        console.error(e);
+        console.error("❌ Generation failed:", e);
+        statusEl.textContent = "❌ Generation failed to start.";
       }
     }
 
