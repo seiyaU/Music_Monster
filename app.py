@@ -147,7 +147,7 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"The creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
+        f"Legendary creature as {base_image_path} in the style of card game Duel Masters is a soldier with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word}"
         f"and designed like creepy monsters in SF or horror films."
     )
@@ -178,7 +178,7 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5"
+    MODEL_VERSION = "ad59ca21177f9e217b9075e7300cf6e14f7e5b4505b87b9689dbd866e9768969"
     #MODEL_VERSION = "f44d81aa9401c7ec7609a0205e5528fd80b08cefd788e2579154b929019a1536"
     
     payload = {
