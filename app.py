@@ -145,8 +145,8 @@ def generate_image(user_id):
     print(influenced_word)
 
     prompt = (
-        f"The creature same as {base_image_path}."
-        f"This has dark atmosphere and has information relevant to the word of {influenced_word}, "
+        f"The creature in {base_image_path} comes from a dark and mysterious world."
+        f"This has dark atmosphere and armor influenced by the word of {influenced_word}, "
         f"designed like creepy monsters in SF or horror films."
     )
     print(prompt)
