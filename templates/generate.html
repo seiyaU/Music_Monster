@@ -21,40 +21,41 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: none;
-      background-color: #4caf50;
-      color: white;
-    }
   </style>
 </head>
 <body>
-  <h2>GENERATING YOUR MUSIC MONSTER...</h2>
+  <h2>GENERATING...</h2>
   <p id="status">少々お待ちください…</p>
   <img id="output-image" style="display:none" />
-  <br>
-  <button id="regenerate-btn" style="display:none">再生成</button>
 
   <script>
     async function startGeneration() {
       const statusText = document.getElementById("status");
-      const imageEl = document.getElementById("output-image");
-      const regenBtn = document.getElementById("regenerate-btn");
+
+      // URLからuser_idを抽出（末尾スラッシュを考慮）
+      const pathParts = window.location.pathname.split("/").filter(p => p);
+      const userId = pathParts[pathParts.length - 1];
+      console.log("Detected userId:", userId);
 
       try {
-        statusText.textContent = "🚀 画像生成リクエスト送信中…";
-
-        // URLからuser_idを取得
-        const userId = window.location.pathname.split("/").pop();
         const res = await fetch(`/generate_api/${userId}`);
+        if (!res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
         const data = await res.json();
-        console.log("Generation result:", data);
+        console.log("Generation created:", data);
 
-        if (data.status === "succeeded" && data.image_url) {
-          statusText.textContent = "✅ 画像生成完了！";
-          imageE
+        if (!data.status_url) {
+          throw new Error("No status_url returned from server.");
+        }
+
+        pollStatus(data.status_url);
+      } catch (e) {
+        console.error("Failed to start generation:", e);
+        statusText.textContent = "❌ Generation failed to start.";
+      }
+    }
+
+    async function pollStatus(url) {
+      const statusText = document.getElementById("status");
+      const imageEl = documen
