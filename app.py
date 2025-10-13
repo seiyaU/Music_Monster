@@ -156,34 +156,35 @@ def generate_image(user_id):
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
     
-    # 🧩 Replicate非同期生成
-    replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
-    
-    print("🚀 画像生成リクエスト送信中...")
+    # ✅ Render上のURLに変換（Replicateからアクセス可能にする）
+    base_url = request.url_root.rstrip("/")
+    image_url = f"{base_url}/{base_image_path}"
 
-    # Render上で外部アクセス可能な静的URLを生成
-    base_url = "https://music-cat-7r71.onrender.com"
-    image_url = f"{base_url}/static/animal_templates/{character_animal}.png"
+    print(f"🧩 Using image URL for Replicate: {image_url}")
 
-    # Replicateクライアント初期化
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-    MODEL_VERSION = "7de2ea26c616d5bf2245ad0d3df6c527cf43ad6c2527e1d3a54e8d3e2f8e5f6b"
-
-    prediction = replicate_client.predictions.create(
-        version=MODEL_VERSION,
-        input={
-            "prompt": prompt,
-            "image": image_url,
-            "strength": 0.4,
-            "num_outputs": 1,
-            "width": 512,
-            "height": 512
-        },
-    )
+    try:
+        print("🚀 画像生成リクエスト送信中...")
+        prediction = replicate_client.predictions.create(
+            version="7de2ea26c616d5bf2245ad0d3df6c527cf43ad6c2527e1d3a54e8d3e2f8e5f6b",  # SD2.1の軽量モデル
+            input={
+                "prompt": prompt,
+                "image": image_url,
+                "num_outputs": 1,
+                "width": 512,
+                "height": 512,
+                "strength": 0.6
+            },
+        )
+    except Exception as e:
+        print("❌ Replicate API request failed:", e)
+        return jsonify({"status": "failed", "image_url": None}), 500
 
     prediction_id = prediction.id
     print(f"🕒 Prediction ID: {prediction_id}")
+
+
 
     # 🔁 Pollingして結果待ち（最大60秒）
     timeout = time.time() + 60
