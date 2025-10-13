@@ -159,19 +159,29 @@ def generate_image(user_id):
     # 🧩 Replicate非同期生成
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
     
-    with open(base_image_path, "rb") as f:
-        image_bytes = io.BytesIO(f.read())
-
-
     print("🚀 画像生成リクエスト送信中...")
+
+    # Render上で外部アクセス可能な静的URLを生成
+    base_url = "https://music-cat-7r71.onrender.com"
+    image_url = f"{base_url}/animal_templates/{character_animal}.png"
+
+    # Replicateクライアント初期化
+    replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
+
+    # 安定版 SDXL モデル
+    model = replicate_client.models.get("stability-ai/sdxl")
+    version = model.versions.list().results[0]  # 最新バージョンを自動選択
+
+    # 画像生成リクエスト
     prediction = replicate_client.predictions.create(
-        version="6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382",  # SDXL
+        version=version.id,
         input={
+            "image": image_url,
             "prompt": prompt,
-            "image": image_bytes,
             "strength": 0.6,
-            "num_outputs": 1
-        },
+            "num_outputs": 1,
+            "aspect_ratio": "3:4"
+        }
     )
 
     prediction_id = prediction.id
@@ -190,11 +200,15 @@ def generate_image(user_id):
                 "image_url": output_url
             })
         elif status == "failed":
-            print("❌ Replicate側で失敗")
-            return jsonify({"status": "failed", "image_url": None})
+            print(f"❌ Replicate側で失敗: {prediction.error}")
+            return jsonify({
+                "status": "failed",
+                "error": prediction.error,
+                "image_url": None
+            })
         time.sleep(3)
 
-    # ⏰ タイムアウト時
+    # ⏰ タイムアウト
     print("⚠️ タイムアウト: 60秒経過")
     return jsonify({"status": "timeout", "image_url": None})
 
