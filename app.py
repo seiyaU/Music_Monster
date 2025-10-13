@@ -140,7 +140,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     #TEST
-    character_animal = "bug"
+    character_animal = "crab"
 
 
     base_image_path = f"animal_templates/{character_animal}.png"
@@ -182,7 +182,7 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "6f54f70da4ccaeb79084738ad549b7b222dd24229948083d49af110791beb0fe"
+    MODEL_VERSION = "c7959eb3a86c09b449dacc11ce8bba295fda466fc6935ab8709e35f4f48c980c"
 
     payload = {
         "version": MODEL_VERSION,
