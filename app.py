@@ -167,7 +167,7 @@ def generate_image(user_id):
     try:
         print("🚀 画像生成リクエスト送信中...")
         prediction = replicate_client.predictions.create(
-            version="7de2ea26c616d5bf2245ad0d3df6c527cf43ad6c2527e1d3a54e8d3e2f8e5f6b",  # SD2.1の軽量モデル
+            version="6a52feace43ce1f6bbc2cdabfc68423cb2319d7444a1a1dae529c5e88b976382",  
             input={
                 "prompt": prompt,
                 "image": image_url,
