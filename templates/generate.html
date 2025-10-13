@@ -25,37 +25,50 @@
 </head>
 <body>
   <h2>GENERATING...</h2>
-  <p id="status">少々お待ちください…</p>
+  <p id="status">Wait a moment...</p>
   <img id="output-image" style="display:none" />
 
   <script>
     async function startGeneration() {
-      const statusText = document.getElementById("status");
-
-      // URLからuser_idを抽出（末尾スラッシュを考慮）
-      const pathParts = window.location.pathname.split("/").filter(p => p);
-      const userId = pathParts[pathParts.length - 1];
-      console.log("Detected userId:", userId);
-
       try {
+        // 現在のURLからuser_idを抽出
+        const userId = window.location.pathname.split("/").pop();
         const res = await fetch(`/generate_api/${userId}`);
-        if (!res.ok) {
-          throw new Error(`Server returned ${res.status}`);
-        }
         const data = await res.json();
-        console.log("Generation created:", data);
+        console.log("Prediction created:", data);
 
-        if (!data.status_url) {
-          throw new Error("No status_url returned from server.");
-        }
-
-        pollStatus(data.status_url);
+        const statusUrl = data.status_url;
+        pollStatus(statusUrl);
       } catch (e) {
-        console.error("Failed to start generation:", e);
-        statusText.textContent = "❌ Generation failed to start.";
+        document.getElementById("status").textContent = "Failed to start generation.";
+        console.error(e);
       }
     }
 
     async function pollStatus(url) {
       const statusText = document.getElementById("status");
-      const imageEl = documen
+      const imageEl = document.getElementById("output-image");
+
+      async function check() {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "succeeded") {
+          statusText.textContent = "✅ Image generation completed!";
+          imageEl.src = data.image_url;
+          imageEl.style.display = "block";
+        } else if (data.status === "failed") {
+          statusText.textContent = "❌ Generation failed.";
+        } else {
+          statusText.textContent = `⏳ Status: ${data.status}...`;
+          setTimeout(check, 3000);
+        }
+      }
+
+      check();
+    }
+
+    startGeneration();
+  </script>
+</body>
+</html>
