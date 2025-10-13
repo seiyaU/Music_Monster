@@ -138,8 +138,8 @@ def generate_image(user_id):
         character_animal = "cat"
     else:
         character_animal = "dragon"
-    
-    base_image_path = f"animal_templates/{character_animal}.png"
+
+    base_image_path = f"static/animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
 
     print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
@@ -163,7 +163,7 @@ def generate_image(user_id):
 
     # Render上で外部アクセス可能な静的URLを生成
     base_url = "https://music-cat-7r71.onrender.com"
-    image_url = f"{base_url}/animal_templates/{character_animal}.png"
+    image_url = f"{base_url}/static/animal_templates/{character_animal}.png"
 
     # Replicateクライアント初期化
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
