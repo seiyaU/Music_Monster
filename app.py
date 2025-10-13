@@ -168,7 +168,7 @@ def generate_image(user_id):
     # Replicateクライアント初期化
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-    MODEL_VERSION = "c7b2c64602f10dcb6d9a0e5406a3b3b408e7b91bdb07bb935dd9ebc1633b7a4a"
+    MODEL_VERSION = "7de2ea26c616d5bf2245ad0d3df6c527cf43ad6c2527e1d3a54e8d3e2f8e5f6b"
 
     prediction = replicate_client.predictions.create(
         version=MODEL_VERSION,
