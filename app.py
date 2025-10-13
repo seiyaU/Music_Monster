@@ -106,8 +106,8 @@ def generate_image(user_id):
         print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
         print({track["album"]["images"][0]["url"]})
 
-        influenced_word_box.append(track)
-        influenced_word_box.append(artist)
+        influenced_word_box.append(track['name'])
+        influenced_word_box.append(artist['name'])
         for i in genre:
             weight = genre_weights.get(i, 0)  # デフォルト値0
             definition_score += weight
@@ -168,20 +168,18 @@ def generate_image(user_id):
     # Replicateクライアント初期化
     replicate_client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
-    # 安定版 SDXL モデル
-    model = replicate_client.models.get("stability-ai/sdxl")
-    version = model.versions.list().results[0]  # 最新バージョンを自動選択
+    MODEL_VERSION = "7de2ea26c616d5bf2245ad0d3df6c527cf43ad6c2527e1d3a54e8d3e2f8e5f6b"
 
-    # 画像生成リクエスト
     prediction = replicate_client.predictions.create(
-        version=version.id,
+        version=MODEL_VERSION,
         input={
-            "image": image_url,
             "prompt": prompt,
-            "strength": 0.6,
+            "image": image_url,  # 直接URLを渡す
+            "strength": 0.4,
             "num_outputs": 1,
-            "aspect_ratio": "3:4"
-        }
+            "width": 512,
+            "height": 512
+        },
     )
 
     prediction_id = prediction.id
