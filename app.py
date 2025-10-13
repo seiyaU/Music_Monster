@@ -7,6 +7,8 @@ from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import time
 import yaml
+from PIL import Image
+
 
 # ✅ 認証済みユーザー情報を保持
 sessions = {}
@@ -154,9 +156,22 @@ def generate_image(user_id):
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
     
-    with open(base_image_path, "rb") as f:
+
+    
+    img = Image.open(base_image_path)
+
+    # 3:4 比率にリサイズ（幅768, 高さ1024など）
+    new_img = img.resize((768, 1024))
+    new_path = f"temp_resized/{character_animal}_3x4.png"
+    os.makedirs("temp_resized", exist_ok=True)
+    new_img.save(new_path)
+
+    with open(new_path, "rb") as f:
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
-        image_data_uri = f"data:image/png;base64,{image_b64}"  
+    image_data_uri = f"data:image/png;base64,{image_b64}"  
+
+
+
 
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
