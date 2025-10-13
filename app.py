@@ -214,6 +214,10 @@ def generate_page(user_id):
 # =====================
 @app.route("/result/<prediction_id>", methods=["GET"])
 def get_result(prediction_id):
+
+    print("🧾 Replicate result data:", data)
+
+
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
     }
