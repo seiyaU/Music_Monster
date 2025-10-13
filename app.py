@@ -138,7 +138,11 @@ def generate_image(user_id):
         character_animal = "cat"
     else:
         character_animal = "dragon"
-    
+
+    #TEST
+    character_animal = "dragon"
+
+
     base_image_path = f"animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
 
