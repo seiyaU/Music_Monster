@@ -252,6 +252,14 @@ def service_worker():
 def serve_static(filename):
     return send_from_directory("static", filename)
 
+# =====================
+# Render用 Health Check
+# =====================
+@app.route("/health")
+def health_check():
+    return jsonify({"status": "ok"}), 200
+
+
 
 # =====================
 # サーバー起動
