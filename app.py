@@ -140,7 +140,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     #TEST
-    character_animal = "horse"
+    character_animal = "bug"
 
 
     base_image_path = f"animal_templates/{character_animal}.png"
