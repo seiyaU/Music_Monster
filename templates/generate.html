@@ -48,13 +48,7 @@
         const data = await res.json();
         console.log("Prediction created:", data);
 
-        //const statusUrl = data.status_url;
-        const statusUrl = data.status_url.startsWith("http")
-          ? data.status_url
-          : `${window.location.origin}${data.status_url}`;
-
-
-
+        const statusUrl = data.status_url;
         pollStatus(statusUrl);
       } catch (e) {
         document.getElementById("status").textContent = "Failed to start generation.";
