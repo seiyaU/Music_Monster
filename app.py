@@ -172,8 +172,8 @@ def generate_image(user_id):
             "image": image_data_uri,
             "strength": 0.6,
             "num_outputs": 1,
-            "aspect_ratio": "3:4"
-
+            "width": 768,
+            "height": 1024
         }
     }
 
