@@ -153,7 +153,7 @@ def generate_image(user_id):
     prompt = (
         f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word} "
-        f"and designed like creepy monsters in SF or horror films."
+        f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
 
