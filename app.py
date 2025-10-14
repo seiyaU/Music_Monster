@@ -24,6 +24,10 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 @app.route("/")
 def home():
+    #return redirect("/login")
+    user_agent = request.headers.get("User-Agent", "")
+    if "Go-http-client" in user_agent:  # Render の自動チェック
+        return "ok", 200
     return redirect("/login")
 
 # ################# Spotify認証 #################
