@@ -152,7 +152,7 @@ def generate_image(user_id):
 
     prompt = (
         f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
-        f"It is influenced by the word of {influenced_word}"
+        f"It is influenced by the word of {influenced_word} "
         f"and designed like creepy monsters in SF or horror films."
     )
     print(prompt)
@@ -182,7 +182,7 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
+    MODEL_VERSION = "ba1a1f04acc79c850b1ba379b41a00d6aad3656aa437199981d516a180847c62"
     
     payload = {
         "version": MODEL_VERSION,
