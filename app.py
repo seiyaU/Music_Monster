@@ -143,8 +143,6 @@ def generate_image(user_id):
     else:
         character_animal = "dragon"
 
-    character_animal = "fish"
-
     base_image_path = f"animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
 
@@ -191,7 +189,6 @@ def generate_image(user_id):
     Models.append(MODEL_VERSION_1)
     Models.append(MODEL_VERSION_2)
     MODEL_VERSION = random.choice(Models)
-    MODEL_VERSION = "6a0885dd258bf1f14ce5e36d2c326edec608aa1e0441512a5663cf8d4a16377f"
     
     payload = {
         "version": MODEL_VERSION,
