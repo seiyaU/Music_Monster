@@ -96,6 +96,8 @@ def generate_image(user_id):
     character_animal = ""
     influenced_word = ""
     influenced_word_box = []
+    album_image_url = ""
+    album_image_url_box = []
 
     with open("data/genre_weights.yaml", "r", encoding="utf-8") as f:
         genre_weights = yaml.safe_load(f)
@@ -106,9 +108,9 @@ def generate_image(user_id):
         artist = item["track"]["artists"][0]
         artist_info = sp.artist(artist["id"])
         genre = artist_info.get("genres", [])
+        album_image_url_box.append(track['album']['images'][0]['url'])
 
         print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
-        print({track["album"]["images"][0]["url"]})
 
         influenced_word_box.append(track['name'])
         influenced_word_box.append(artist['name'])
@@ -149,6 +151,7 @@ def generate_image(user_id):
 
     base_image_path = f"animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
+    album_image_url = random.choice(album_image_url_box)
 
     print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
     print(character_animal)
@@ -157,7 +160,9 @@ def generate_image(user_id):
     prompt = (
         f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word} "
-        f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic."
+        f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic. "
+        f"The background is made by things relevant to {album_image_url}."
+        ##f"Highly detailed, intricate, elegant, ornate, beautiful, epic, dramatic lighting, 8k, photorealistic"
     )
     print(prompt)
 
@@ -200,6 +205,7 @@ def generate_image(user_id):
         "input": {
             "prompt": prompt,
             "image": image_data_uri,
+            "image": album_image_url,
             "strength": 0.6,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
