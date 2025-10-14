@@ -182,7 +182,8 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "ba1a1f04acc79c850b1ba379b41a00d6aad3656aa437199981d516a180847c62"
+    MODEL_VERSION = "ca4f2ed73bc8b5d9a97c49a349fc13fa50e736b15e9396eae8ea0f0634b089fd"
+    MODEL_VERSION_1 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     
     payload = {
         "version": MODEL_VERSION,
