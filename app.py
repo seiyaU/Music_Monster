@@ -189,6 +189,8 @@ def generate_image(user_id):
     Models.append(MODEL_VERSION_1)
     Models.append(MODEL_VERSION_2)
     MODEL_VERSION = random.choice(Models)
+    MODEL_VERSION = "6c4ebdf049df552f8c02b3a7bbb3afec3d37b20924282bab8744f1168b6de470"
+    
     
     payload = {
         "version": MODEL_VERSION,
