@@ -134,11 +134,15 @@ def generate_image(user_id):
         character_animal = "frog"
     elif definition_score <= 4000:
         character_animal = "snake"
-    elif definition_score <= 8000:
+    elif definition_score <= 7000:
         character_animal = "horse"
+    elif definition_score <= 8000:
+        character_animal = "seal"
     elif definition_score <= 9000:
         character_animal = "dog"
-    elif definition_score <= 13000:
+    elif definition_score <= 10000:
+        character_animal = "T-rex"
+    elif definition_score <= 11000:
         character_animal = "cat"
     else:
         character_animal = "dragon"
@@ -174,9 +178,6 @@ def generate_image(user_id):
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{image_b64}"  
 
-
-
-
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
@@ -186,10 +187,12 @@ def generate_image(user_id):
     Models=[]
     MODEL_VERSION_1 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     MODEL_VERSION_2 = "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad"
+    MODEL_VERSION_3 = "6c4ebdf049df552f8c02b3a7bbb3afec3d37b20924282bab8744f1168b6de470"
     Models.append(MODEL_VERSION_1)
     Models.append(MODEL_VERSION_2)
+    Models.append(MODEL_VERSION_3)
     MODEL_VERSION = random.choice(Models)
-    MODEL_VERSION = "6c4ebdf049df552f8c02b3a7bbb3afec3d37b20924282bab8744f1168b6de470"
+    
     
     
     payload = {
