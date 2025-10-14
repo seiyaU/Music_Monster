@@ -184,6 +184,12 @@ def generate_image(user_id):
     image_data_uri = f"data:image/png;base64,{image_b64}"  
 
 
+
+
+
+
+
+
     # ① URLから画像を取得してPILで開く
     response = requests.get(album_image_url)
     img2 = Image.open(io.BytesIO(response.content))
@@ -201,6 +207,11 @@ def generate_image(user_id):
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     background_image_data_uri = f"data:image/png;base64,{image_b64}"
+
+
+
+
+
 
 
 
@@ -230,7 +241,6 @@ def generate_image(user_id):
         "input": {
             "prompt": prompt,
             "image": image_data_uri,
-            "image": background_image_data_uri,
             "strength": 0.6,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
