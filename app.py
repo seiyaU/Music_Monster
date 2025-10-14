@@ -184,41 +184,6 @@ def generate_image(user_id):
     image_data_uri = f"data:image/png;base64,{image_b64}"  
 
 
-
-
-
-
-
-
-    # ① URLから画像を取得してPILで開く
-    response = requests.get(album_image_url)
-    img2 = Image.open(io.BytesIO(response.content))
-
-    # ② 3:4 比率にリサイズ（幅768, 高さ1024など）
-    new_img2 = img2.resize((768, 1024))
-
-    # ③ 一時フォルダに保存
-    os.makedirs("temp_resized", exist_ok=True)
-    new_path2 = "temp_resized/background_3x4.png"
-    new_img2.save(new_path2)
-
-    # ④ Base64に変換してReplicateに渡す
-    with open(new_path2, "rb") as f:
-        image_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-    background_image_data_uri = f"data:image/png;base64,{image_b64}"
-
-
-
-
-
-
-
-
-
-
-
-
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json",
