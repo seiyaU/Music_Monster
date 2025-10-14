@@ -172,16 +172,36 @@ def generate_image(user_id):
 
 
     img = Image.open(base_image_path)
-
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
     new_img = img.resize((768, 1024))
     new_path = f"temp_resized/{character_animal}_3x4.png"
     os.makedirs("temp_resized", exist_ok=True)
     new_img.save(new_path)
 
+
     with open(new_path, "rb") as f:
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{image_b64}"  
+
+
+    img2 = Image.open(album_image_url)
+    # 3:4 比率にリサイズ（幅768, 高さ1024など）
+    new_img2 = img2.resize((768, 1024))
+    new_path2 = f"temp_resized/background_3x4.png"
+    os.makedirs("temp_resized", exist_ok=True)
+    new_img2.save(new_path2)
+
+
+    with open(new_path2, "rb") as f:
+        image_b64 = base64.b64encode(f.read()).decode("utf-8")
+    background_image_data_uri = f"data:image/png;base64,{image_b64}"  
+
+
+
+
+
+
+
 
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
@@ -192,7 +212,7 @@ def generate_image(user_id):
     Models=[]
     MODEL_VERSION_1 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     MODEL_VERSION_2 = "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad"
-    MODEL_VERSION_3 = "6c4ebdf049df552f8c02b3a7bbb3afec3d37b20924282bab8744f1168b6de470"
+    MODEL_VERSION_3 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     Models.append(MODEL_VERSION_1)
     Models.append(MODEL_VERSION_2)
     Models.append(MODEL_VERSION_3)
@@ -205,7 +225,7 @@ def generate_image(user_id):
         "input": {
             "prompt": prompt,
             "image": image_data_uri,
-            "image": album_image_url,
+            "image": background_image_data_uri,
             "strength": 0.6,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
