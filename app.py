@@ -143,6 +143,8 @@ def generate_image(user_id):
     else:
         character_animal = "dragon"
 
+    character_animal = "bug"
+
     base_image_path = f"animal_templates/{character_animal}.png"
     influenced_word = random.choice(influenced_word_box)
 
@@ -182,9 +184,13 @@ def generate_image(user_id):
         "Content-Type": "application/json",
     }
 
-    MODEL_VERSION = "a30c1d42ec0f3a65adea941a00ed89605f3d68f75714a9ea6d9cfece4da2f683"
+
+    Models=[]
     MODEL_VERSION_1 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     MODEL_VERSION_2 = "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad"
+    Models.append(MODEL_VERSION_1)
+    Models.append(MODEL_VERSION_2)
+    MODEL_VERSION = random.choice(Models)
     
     payload = {
         "version": MODEL_VERSION,
