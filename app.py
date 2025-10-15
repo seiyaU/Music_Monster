@@ -111,7 +111,10 @@ def generate_image(user_id):
     sp = Spotify(auth=access_token)
 
     # 🎵 最近再生曲を取得
+    print(f"🎧 Calling Spotify API: current_user_recently_played()")
     recent = sp.current_user_recently_played(limit=50)
+    print(f"✅ Received {len(recent.get('items', []))} tracks")
+
     if "items" not in recent or len(recent["items"]) == 0:
         return "No recent tracks found.", 404
 
@@ -130,7 +133,11 @@ def generate_image(user_id):
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
         artist = item["track"]["artists"][0]
+
+        print(f"🎤 Calling Spotify API: artist({artist['id']})")
         artist_info = sp.artist(artist["id"])
+        print(f"✅ Artist: {artist_info['name']}")
+
         genre = artist_info.get("genres", [])
         album_image_url_box.append(track['album']['images'][0]['url'])
 
