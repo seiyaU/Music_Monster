@@ -271,7 +271,7 @@ def generate_image(user_id):
     }
 
     # ✅ 非同期でpredictionを作成
-    res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload)
+    res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload, timeout=120)
     if res.status_code != 201:
         data = res.json()
         print("🚨 Replicate error:", data)
