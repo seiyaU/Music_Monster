@@ -113,7 +113,7 @@ def generate_image(user_id):
 
     # 🎵 最近再生曲を取得
     print(f"🎧 Calling Spotify API: current_user_recently_played()")
-    recent = sp.current_user_recently_played(limit=10)
+    recent = sp.current_user_recently_played(limit=50)
     print(f"✅ Received {len(recent.get('items', []))} tracks")
 
     if "items" not in recent or len(recent["items"]) == 0:
@@ -193,7 +193,7 @@ def generate_image(user_id):
         f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word} "
         f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic. "
-        ##f"influenced by {background_image_data_uri}."
+        f"influenced by {background_image_data_uri}."
         ##f"Highly detailed, intricate, elegant, ornate, beautiful, epic, dramatic lighting, 8k, photorealistic"
     )
     print(prompt)
@@ -222,22 +222,22 @@ def generate_image(user_id):
 
 
     # ① URLから画像を取得してPILで開く
-    #response = requests.get(album_image_url)
-    #img2 = Image.open(io.BytesIO(response.content))
+    response = requests.get(album_image_url)
+    img2 = Image.open(io.BytesIO(response.content))
 
     # ② 3:4 比率にリサイズ（幅768, 高さ1024など）
-    #new_img2 = img2.resize((768, 1024))
+    new_img2 = img2.resize((768, 1024))
 
     # ③ 一時フォルダに保存
-    #os.makedirs("temp_resized", exist_ok=True)
-    #new_path2 = "temp_resized/background_3x4.png"
-    #new_img2.save(new_path2)
+    os.makedirs("temp_resized", exist_ok=True)
+    new_path2 = "temp_resized/background_3x4.png"
+    new_img2.save(new_path2)
 
     # ④ Base64に変換してReplicateに渡す
-    #with open(new_path2, "rb") as f:
-    #    image_b64 = base64.b64encode(f.read()).decode("utf-8")
+    with open(new_path2, "rb") as f:
+        image_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-    #background_image_data_uri = f"data:image/png;base64,{image_b64}"##
+    background_image_data_uri = f"data:image/png;base64,{image_b64}"##
 
 
 
