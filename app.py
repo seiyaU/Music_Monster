@@ -134,11 +134,7 @@ def generate_image(user_id):
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
         artist = item["track"]["artists"][0]
-
-        print(f"🎤 Calling Spotify API: artist({artist['id']})")
         artist_info = sp.artist(artist["id"])
-        print(f"✅ Artist: {artist_info['name']}")
-
         genre = artist_info.get("genres", [])
         album_image_url_box.append(track['album']['images'][0]['url'])
 
