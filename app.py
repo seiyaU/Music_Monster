@@ -81,7 +81,8 @@ def generate_image(user_id):
 
     session_data = sessions.get(user_id)
     if not session_data:
-        return redirect("/login")
+        return jsonify({"status": "login_required"}), 401
+        #return redirect("/login")
 
 
 

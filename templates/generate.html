@@ -49,6 +49,12 @@
         console.log("🟠 userId:", userId);
         const res = await fetch(`/generate_api/${userId}`);
         console.log("🟣 API response status:", res.status);
+        if (res.status === 401) {
+          // ログインが必要な場合
+          window.location.href = "/login";
+          return; 
+        }
+
         const data = await res.json();
         console.log("Prediction created:", data);
 
