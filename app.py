@@ -169,13 +169,13 @@ def generate_image(user_id):
     print(character_animal)
     print(influenced_word)
     print(album_image_url)
+    #{base_image_path}
 
     prompt = (
-        f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
+        f"Legendary creature in {album_image_url} is a soldier with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word} "
         f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic. "
-        f"influenced by {album_image_url}. "
-        f"Highly detailed, intricate, elegant, ornate, beautiful, epic, dramatic lighting, 8k, photorealistic"
+        f"influenced by {album_image_url}."
     )
     print(prompt)
 
