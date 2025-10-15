@@ -171,7 +171,7 @@ def generate_image(user_id):
     print(album_image_url)
 
     prompt = (
-        f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
+        f"Legendary creature in {base_image_path} is a soldier or knight with some weapons from a dark and mysterious world."
         f"It is influenced by the word of {influenced_word} "
         f"and designed like creepy monsters in SF or horror films but not cartoonish rather realistic. "
         f"Background is influenced by {album_image_url}."
@@ -203,10 +203,8 @@ def generate_image(user_id):
     Models=[]
     MODEL_VERSION_1 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     MODEL_VERSION_2 = "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad"
-    MODEL_VERSION_3 = "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a"
     Models.append(MODEL_VERSION_1)
     Models.append(MODEL_VERSION_2)
-    Models.append(MODEL_VERSION_3)
     MODEL_VERSION = random.choice(Models)
     
     
