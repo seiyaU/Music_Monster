@@ -84,24 +84,8 @@ def generate_image(user_id):
         return jsonify({"status": "login_required"}), 401
         #return redirect("/login")
 
-
-
-
-
+    
     # --- 有効期限切れチェック ---
-    if time.time() > session_data["expires_at"]:
-        print("♻️ Spotify access token expired. Refreshing...")
-        sp_oauth = SpotifyOAuth(
-            client_id=CLIENT_ID,
-            client_secret=CLIENT_SECRET,
-            redirect_uri=REDIRECT_URI,
-            scope="user-read-recently-played user-read-email"
-        )
-        token_info = sp_oauth.refresh_access_token(session_data["refresh_token"])
-        session_data["access_token"] = token_info["access_token"]
-        session_data["expires_at"] = token_info["expires_at"]
-        sessions[user_id] = session_data
-
 
 
 
@@ -184,6 +168,7 @@ def generate_image(user_id):
     print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
     print(character_animal)
     print(influenced_word)
+    print(album_image_url)
 
     prompt = (
         f"Legendary creature in {base_image_path} is a soldier with some weapons from a dark and mysterious world."
@@ -206,27 +191,9 @@ def generate_image(user_id):
     os.makedirs("temp_resized", exist_ok=True)
     new_img.save(new_path)
 
-
     with open(new_path, "rb") as f:
         image_b64 = base64.b64encode(f.read()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{image_b64}"  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
