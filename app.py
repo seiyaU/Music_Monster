@@ -171,10 +171,9 @@ def generate_image(user_id):
     print(album_image_url)
 
     prompt = (
-        f"Legendary creature in {base_image_path} is a soldier or knight with some weapons from a dark and mysterious world."
+        f"Legendary creature a soldier or knight with some weapons from a dark and mysterious world."
         f"It like {influenced_word} "
-        f"and designed like creepy spooky monsters in SF or horror films. "
-        f"The background is made by things relevant to {album_image_url}."
+        f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
 
@@ -215,7 +214,7 @@ def generate_image(user_id):
             "prompt": prompt,
             "image": image_data_uri,
             "image": album_image_url,
-            "strength": 0.6,
+            "strength": 0.4,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
         }
