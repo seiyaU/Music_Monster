@@ -113,7 +113,7 @@ def generate_image(user_id):
 
     # 🎵 最近再生曲を取得
     print(f"🎧 Calling Spotify API: current_user_recently_played()")
-    recent = sp.current_user_recently_played(limit=50)
+    recent = sp.current_user_recently_played(limit=10)
     print(f"✅ Received {len(recent.get('items', []))} tracks")
 
     if "items" not in recent or len(recent["items"]) == 0:
