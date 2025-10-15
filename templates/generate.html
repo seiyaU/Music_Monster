@@ -40,11 +40,15 @@
   <img id="output-image" style="display:none" />
 
   <script>
+    console.log("🟢 Page loaded");
+
     async function startGeneration() {
       try {
         // 現在のURLからuser_idを抽出
         const userId = window.location.pathname.split("/").pop();
+        console.log("🟠 userId:", userId);
         const res = await fetch(`/generate_api/${userId}`);
+        console.log("🟣 API response status:", res.status);
         const data = await res.json();
         console.log("Prediction created:", data);
 
@@ -52,7 +56,7 @@
         pollStatus(statusUrl);
       } catch (e) {
         document.getElementById("status").textContent = "Failed to start generation.";
-        console.error(e);
+        console.error("🚨 Error in startGeneration:", e);
       }
     }
 
