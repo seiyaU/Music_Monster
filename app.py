@@ -165,8 +165,8 @@ def generate_image(user_id):
     image_data_uri = f"data:image/png;base64,{image_b64}"
 
     prompt = (
-        f"Legendary creature in {image_data_uri} is a soldier or knight with some weapons from a dark and mysterious world."
-        f"It like {influenced_word} with things in {album_image_url} "
+        f"Legendary creature in {character_animal} of picture is a soldier or knight with some weapons from a dark and mysterious world."
+        f"It like {influenced_word} and influenced by picture of {album_image_url} "
         f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
