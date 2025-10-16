@@ -153,7 +153,7 @@ def generate_image(user_id):
     print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
     print(character_animal)
     print(influenced_word)
-    print(album_image_url)
+    
 
     img = Image.open(base_image_path)
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
@@ -163,9 +163,19 @@ def generate_image(user_id):
     image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{image_b64}"
 
+    img2 = Image.open(album_image_url)
+    # 3:4 比率にリサイズ（幅768, 高さ1024など）
+    new_img = img2.resize((768, 1024))
+    buffer = BytesIO()
+    new_img.save(buffer, format="PNG")
+    image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    album_data_uri = f"data:image/png;base64,{image_b64}"
+    print(album_data_uri)
+
+
     prompt = (
         f"Legendary creature in {character_animal} of picture is a soldier or knight with some weapons from a dark and mysterious world."
-        f"It like {influenced_word} and influenced by picture of {album_image_url} "
+        f"It like {influenced_word} and influenced by picture of {album_data_uri} "
         f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
@@ -186,8 +196,7 @@ def generate_image(user_id):
             "prompt": prompt,
             "image": image_data_uri,
             "strength": 0.6,
-            "image": album_image_url,
-            "strength": 0.1,
+            "image": album_data_uri,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
         }
