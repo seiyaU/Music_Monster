@@ -98,7 +98,6 @@ def generate_image(user_id):
     album_image_url_box = []
 
     
-
     print("\n🎵 最近再生した曲:")
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
@@ -187,7 +186,8 @@ def generate_image(user_id):
             "prompt": prompt,
             "image": image_data_uri,
             "strength": 0.6,
-            #"image": album_image_url,
+            "image": album_image_url,
+            "strength": 0.6,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
         }
