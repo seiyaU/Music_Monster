@@ -125,17 +125,17 @@ def generate_image(user_id):
             definition_score += 50
 
     # 動物の確定
-    if definition_score <= 500:
+    if definition_score <= 1000:
         character_animal = "bug"
-    elif definition_score <= 1000:
-        character_animal = "fish"
-    elif definition_score <= 1500:
-        character_animal = "octopus"    
     elif definition_score <= 2000:
-        character_animal = "crab"
+        character_animal = "fish"
     elif definition_score <= 3000:
-        character_animal = "frog"
+        character_animal = "octopus"    
     elif definition_score <= 4000:
+        character_animal = "crab"
+    elif definition_score <= 5000:
+        character_animal = "frog"
+    elif definition_score <= 6000:
         character_animal = "snake"
     elif definition_score <= 7000:
         character_animal = "horse"
