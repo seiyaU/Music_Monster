@@ -187,7 +187,7 @@ def generate_image(user_id):
             "image": image_data_uri,
             "strength": 0.6,
             "image": album_image_url,
-            "strength": 0.6,
+            "strength": 0.1,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
         }
