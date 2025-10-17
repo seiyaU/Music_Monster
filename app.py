@@ -191,7 +191,9 @@ def generate_image(user_id):
 
     MODEL_VERSION = random.choice([
         "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad"
+        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+        "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64",
+        "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5"
     ])
 
     payload = {
