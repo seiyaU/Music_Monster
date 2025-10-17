@@ -151,7 +151,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "bug"
+        character_animal = "fish"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -174,8 +174,8 @@ def generate_image(user_id):
     image_data_uri = f"data:image/png;base64,{image_b64}"
 
     prompt = (
-        f"Legendary creature in {character_animal} of picture is a soldier or knight with some weapons from a dark and mysterious world."
-        f"It like {influenced_word} and influenced by picture of {album_image_url} "
+        f"Legendary creature in {character_animal} of picture is a soldier or knight of alien with some weapons from a dark and mysterious world."
+        f"It like {influenced_word} and background image is {album_image_url} "
         f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
