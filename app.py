@@ -198,7 +198,7 @@ def generate_image(user_id):
         "684e5e879da2bcdbddc1a094650e17179d14024398d1d6146c6382ff07488fc1",
         "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42"
     ])
-    MODEL_VERSION = "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64"
+    MODEL_VERSION = "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5"
 
     payload = {
         "version": MODEL_VERSION,
