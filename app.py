@@ -128,7 +128,7 @@ def generate_image(user_id):
     if definition_score <= 1000:
         character_animal = "bug"
     elif definition_score <= 2000:
-        character_animal = "fish"
+        character_animal = "seal"
     elif definition_score <= 3000:
         character_animal = "octopus"    
     elif definition_score <= 4000:
