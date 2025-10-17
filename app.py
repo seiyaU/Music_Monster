@@ -150,6 +150,9 @@ def generate_image(user_id):
     else:
         character_animal = "dragon"
 
+    if user_id == "noel1109.marble1101":
+        character_animal = "bug"
+
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
         return f"Template not found: {base_image_path}", 404
