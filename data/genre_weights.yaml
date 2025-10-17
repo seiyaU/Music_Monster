@@ -43,7 +43,7 @@ groove: 80
 grunge: 60
 guitar: 40
 happy: 10
-hard rock: 100
+hard rock: 90
 hardcore: 10
 hardstyle: 10
 heavy metal: 70
@@ -94,7 +94,7 @@ rainy day: 10
 reggae: 70
 reggaeton: 10
 road trip: 10
-rock: 50
+rock: 20
 rock n roll: 70
 rockabilly: 70
 romance: 10
@@ -153,3 +153,4 @@ madchester: 100
 doo-wop: 70
 city pop: 50
 japanese indie: 30
+shoegaze: 50
