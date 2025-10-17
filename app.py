@@ -178,7 +178,7 @@ def generate_image(user_id):
     image_data_uri = f"data:image/png;base64,{image_b64}"
 
     prompt = (
-        f"Legendary creature in {character_animal} of picture is a soldier or knight of alien with some weapons from a dark and mysterious world."
+        f"Legendary creature in {character_animal} of picture is a soldier or knight of alien has some weapons and from a dark and mysterious world."
         f"It like {influenced_word} and background image is {album_image_url} "
         f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
@@ -190,8 +190,11 @@ def generate_image(user_id):
     }
 
     MODEL_VERSION = random.choice([
-        "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a",
         "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+        "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a", 
         "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64",
         "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5",
         "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
