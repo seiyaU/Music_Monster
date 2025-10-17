@@ -11,11 +11,14 @@ import time
 import yaml
 from PIL import Image
 from io import BytesIO
+import json
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
 # Redis + Flask-Session 設定
+redis_url = os.getenv("REDIS_URL")
+redis_client = redis.from_url(redis_url) 
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
 app.config["SESSION_KEY_PREFIX"] = "spotify_session:"
@@ -94,8 +97,24 @@ def generate_image(user_id):
     access_token = session.get("access_token")
     sp = Spotify(auth=access_token)
 
-    # 🎵 最近再生曲を取得
-    recent = sp.current_user_recently_played(limit=50)
+    # ===============================
+    # 🟢 Spotify再生履歴のキャッシュ処理
+    # ===============================
+    cache_key = f"recently_played:{user_id}"
+    cached_data = redis_client.get(cache_key)
+
+    if cached_data:
+        print("🟢 Redisキャッシュから再生履歴を取得")
+        recent = json.loads(cached_data)
+    else:
+        print("🟠 Spotify APIから再生履歴を取得")
+        try:
+            recent = sp.current_user_recently_played(limit=50)
+            # 取得成功時にキャッシュ（1時間 = 3600秒）
+            redis_client.setex(cache_key, 3600, json.dumps(recent))
+        except Exception as e:
+            print("🚨 Spotify API error:", e)
+            return jsonify({"error": "Spotify data fetch failed"}), 500
 
     if not recent.get("items"):
         return "No recent tracks found.", 404
@@ -113,7 +132,22 @@ def generate_image(user_id):
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
         artist = item["track"]["artists"][0]
-        artist_info = sp.artist(artist["id"])
+        artist_id = artist["id"]
+
+        # 🟢 アーティスト情報キャッシュ
+        artist_cache_key = f"artist_info:{artist_id}"
+        cached_artist_info = redis_client.get(artist_cache_key)
+
+        if cached_artist_info:
+            artist_info = json.loads(cached_artist_info)
+        else:
+            try:
+                artist_info = sp.artist(artist_id)
+                redis_client.setex(artist_cache_key, 3600, json.dumps(artist_info))  # 1時間キャッシュ
+            except Exception as e:
+                print(f"⚠️ Artist fetch failed ({artist['name']}):", e)
+                continue
+
         genre = artist_info.get("genres", [])
         album_image_url_box.append(track['album']['images'][0]['url'])
         influenced_word_box.append(track['name'])
