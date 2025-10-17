@@ -195,12 +195,13 @@ def generate_image(user_id):
         "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64",
         "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5",
         "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
+        "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986",
 
         "fdc7a34e44fd97c0a6a1f1ef72b68bcf2e2eb3be0c0246f036f298a363ea256c",
         "d53918f6a274da520ba36474408999d2f91ea9c2c5afb17abef15c6c42030963",
         "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
     ])
-    MODEL_VERSION = "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986"
+    MODEL_VERSION = "fdc7a34e44fd97c0a6a1f1ef72b68bcf2e2eb3be0c0246f036f298a363ea256c"
 
     payload = {
         "version": MODEL_VERSION,
