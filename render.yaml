@@ -7,3 +7,4 @@ services:
     startCommand: gunicorn app:app --workers=2 --timeout=180
     healthCheckPath: /health
     autoDeploy: true
+

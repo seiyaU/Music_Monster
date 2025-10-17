@@ -2,9 +2,11 @@ import base64
 import os
 import random
 import requests
-from flask import Flask, request, redirect, jsonify, send_from_directory, render_template
+from flask import Flask, request, redirect, jsonify, send_from_directory, render_template, session
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
+from flask_session import Session
+import redis
 import time
 import yaml
 from PIL import Image
@@ -13,8 +15,14 @@ from io import BytesIO
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
-# 🧠 全ユーザーのセッションを保持（Renderでは一時的）
-sessions = {}
+# Redis + Flask-Session 設定
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
+app.config["SESSION_KEY_PREFIX"] = "spotify_session:"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
+
+Session(app)
 
 try:
     with open("data/genre_weights.yaml", "r", encoding="utf-8") as f:
@@ -59,12 +67,11 @@ def callback():
     user = sp.me()
     user_id = user["id"]
 
-    # ✅ ユーザーごとにセッション保存
-    sessions[user_id] = {
-        "access_token": access_token,
-        "refresh_token": token_info.get("refresh_token"),
-        "expires_at": token_info.get("expires_at"),
-    }
+    # ✅ Redis-backed session に保存
+    session["user_id"] = user_id
+    session["access_token"] = access_token
+    session["refresh_token"] = token_info.get("refresh_token")
+    session["expires_at"] = token_info.get("expires_at")
 
     print(f"✅ 認証成功: {user_id}")
     return redirect(f"/generate/{user_id}")
@@ -73,21 +80,18 @@ def callback():
 @app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
 
-    session_data = sessions.get(user_id)
-    if not session_data:
+    if session.get("user_id") != user_id:
         return jsonify({"status": "login_required"}), 401
 
     
-    # --- 有効期限切れチェック ---
-    if time.time() > session_data.get("expires_at", 0):
-        refresh_token = session_data.get("refresh_token")
+    # トークン有効期限チェック
+    if time.time() > session.get("expires_at", 0):
+        refresh_token = session.get("refresh_token")
         new_token = sp_oauth.refresh_access_token(refresh_token)
-        session_data.update({
-            "access_token": new_token["access_token"],
-            "expires_at": new_token["expires_at"]
-        })
+        session["access_token"] = new_token["access_token"]
+        session["expires_at"] = new_token["expires_at"]
 
-    access_token = session_data["access_token"]
+    access_token = session.get("access_token")
     sp = Spotify(auth=access_token)
 
     # 🎵 最近再生曲を取得
@@ -122,7 +126,7 @@ def generate_image(user_id):
             print(f"   - {i}: {genre_weights.get(i, 0)}")
 
         if artist["name"] == "The Beatles":
-            definition_score += 50
+            definition_score += 30
 
     # 動物の確定
     if definition_score <= 1000:
@@ -196,7 +200,6 @@ def generate_image(user_id):
             "prompt": prompt,
             "image": image_data_uri,
             "strength": 0.6,
-            "strength": 0.1,
             "num_outputs": 1,
             "aspect_ratio": "3:4"
         }
