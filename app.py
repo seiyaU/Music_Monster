@@ -9,9 +9,10 @@ from flask_session import Session
 import redis
 import time
 import yaml
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from io import BytesIO
 import json
+import numpy as np  # ✅ ノイズ生成に利用
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
@@ -190,6 +191,7 @@ def generate_image(user_id):
 
     if user_id == "noel1109.marble1101":
         character_animal = "fish"
+        character_animal = "seal"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -274,9 +276,53 @@ def get_result(prediction_id):
         return f"Failed to fetch prediction: {res.text}", 500
 
     data = res.json()
+    
+    if data["status"] != "succeeded":
+        return jsonify({"status": data["status"], "image_url": None})
+    
+    # ✅ 生成された画像URLを取得
+    image_url = data["output"][0]
+    response = requests.get(image_url)
+    img = Image.open(BytesIO(response.content)).convert("RGBA")
+
+    # =============================
+    # ✨ ホログラム風エフェクト生成処理
+    # =============================
+    width, height = img.size
+
+    # グラデーションレイヤー（虹色の光）
+    gradient = Image.new("RGBA", img.size)
+    for x in range(width):
+        r = int(128 + 127 * np.sin(x / 20.0))
+        g = int(128 + 127 * np.sin(x / 25.0 + 2))
+        b = int(128 + 127 * np.sin(x / 30.0 + 4))
+        for y in range(height):
+            gradient.putpixel((x, y), (r, g, b, 40))
+
+    # ノイズレイヤー
+    noise = Image.effect_noise(img.size, 64).convert("L")
+    noise = ImageEnhance.Contrast(noise).enhance(2.0)
+    noise_colored = Image.merge("RGBA", (noise, noise, noise, noise))
+    noise_colored.putalpha(40)
+
+    # ✨ エフェクト合成
+    holo = Image.alpha_composite(img, gradient)
+    holo = Image.alpha_composite(holo, noise_colored)
+    holo = holo.filter(ImageFilter.SMOOTH_MORE)
+    holo = ImageEnhance.Brightness(holo).enhance(1.05)
+    holo = ImageEnhance.Contrast(holo).enhance(1.1)
+
+    # 一時ファイル保存
+    output_path = f"static/generated/hologram_{prediction_id}.png"
+    os.makedirs("static/generated", exist_ok=True)
+    holo.save(output_path)
+
+    print(f"✅ ホログラム画像を生成: {output_path}")
+
+    # 返却
     return jsonify({
-        "status": data["status"],
-        "image_url": data["output"][0] if data["status"] == "succeeded" else None
+        "status": "succeeded",
+        "image_url": f"/{output_path}"
     })
 
 # =====================
