@@ -11,6 +11,7 @@ import time
 import yaml
 from PIL import Image
 from io import BytesIO
+import json
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
@@ -117,7 +118,6 @@ def generate_image(user_id):
     cached_data = redis_client.get(cache_key)
 
     if cached_data:
-        import json
         recent = json.loads(cached_data)
         print("🟢 Redisキャッシュから再生履歴を取得")
     else:
