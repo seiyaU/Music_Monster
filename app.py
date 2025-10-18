@@ -191,7 +191,6 @@ def generate_image(user_id):
 
     if user_id == "noel1109.marble1101":
         character_animal = "fish"
-        character_animal = "seal"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
