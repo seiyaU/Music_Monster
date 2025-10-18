@@ -11,19 +11,21 @@ import time
 import yaml
 from PIL import Image
 from io import BytesIO
-import json
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
 # Redis + Flask-Session 設定
-redis_url = os.getenv("REDIS_URL")
-redis_client = redis.from_url(redis_url) 
+redis_client = redis.from_url(os.getenv("REDIS_URL"))
 app.config["SESSION_TYPE"] = "redis"
-app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
-app.config["SESSION_KEY_PREFIX"] = "spotify_session:"
+app.config["SESSION_REDIS"] = redis_client
+app.config["SESSION_KEY_PREFIX"] = "spotify_session:"  # ✅ ユーザー単位で独立
+app.config["SESSION_COOKIE_NAME"] = "spotify_user_session"  # ✅ クッキー名も固有
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 
 Session(app)
 
@@ -40,13 +42,15 @@ CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
-sp_oauth = SpotifyOAuth(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    redirect_uri=REDIRECT_URI,
-    scope="user-read-recently-played user-read-email"
-)
-
+# SpotifyOAuth を動的生成（重要）
+def get_spotify_oauth():
+    """ユーザーごとに独立したSpotifyOAuthインスタンスを生成"""
+    return SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope="user-read-recently-played user-read-email"
+    )
 
 @app.route("/")
 def home():
@@ -55,11 +59,13 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
+    sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
+    sp_oauth = get_spotify_oauth()
     token_info = sp_oauth.get_access_token(code, as_dict=True)
     access_token = token_info.get("access_token")
     if not access_token:
@@ -83,18 +89,25 @@ def callback():
 @app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
 
-    if session.get("user_id") != user_id:
+    # ✅ セッション検証（他人のデータを防ぐ）
+    current_user = session.get("user_id")
+    if not current_user or current_user != user_id:
+        print("❌ セッション不一致: 他ユーザーアクセス検出")
         return jsonify({"status": "login_required"}), 401
-
     
     # トークン有効期限チェック
     if time.time() > session.get("expires_at", 0):
+        sp_oauth = get_spotify_oauth()
         refresh_token = session.get("refresh_token")
         new_token = sp_oauth.refresh_access_token(refresh_token)
         session["access_token"] = new_token["access_token"]
         session["expires_at"] = new_token["expires_at"]
 
+
     access_token = session.get("access_token")
+    if not access_token:
+        return jsonify({"error": "No valid access token"}), 401
+
     sp = Spotify(auth=access_token)
 
     # ===============================
@@ -104,27 +117,27 @@ def generate_image(user_id):
     cached_data = redis_client.get(cache_key)
 
     if cached_data:
-        print("🟢 Redisキャッシュから再生履歴を取得")
+        import json
         recent = json.loads(cached_data)
+        print("🟢 Redisキャッシュから再生履歴を取得")
     else:
         print("🟠 Spotify APIから再生履歴を取得")
         try:
             recent = sp.current_user_recently_played(limit=50)
-            # 取得成功時にキャッシュ（1時間 = 3600秒）
-            redis_client.setex(cache_key, 3600, json.dumps(recent))
         except Exception as e:
             print("🚨 Spotify API error:", e)
             return jsonify({"error": "Spotify data fetch failed"}), 500
 
     if not recent.get("items"):
         return "No recent tracks found.", 404
+    
+    # ✅ Redis に保存（10分キャッシュ）
+    redis_client.setex(cache_key, 3600, json.dumps(recent))
+    print(f"✅ キャッシュ保存: {user_id}")
 
     # 🎨 ベースとなるテンプレート画像を選択
     definition_score = 0
-    character_animal = ""
-    influenced_word = ""
     influenced_word_box = []
-    album_image_url = ""
     album_image_url_box = []
 
     
@@ -132,26 +145,13 @@ def generate_image(user_id):
     for idx, item in enumerate(recent["items"], 1):
         track = item["track"]
         artist = item["track"]["artists"][0]
-        artist_id = artist["id"]
-
-        # 🟢 アーティスト情報キャッシュ
-        artist_cache_key = f"artist_info:{artist_id}"
-        cached_artist_info = redis_client.get(artist_cache_key)
-
-        if cached_artist_info:
-            artist_info = json.loads(cached_artist_info)
-        else:
-            try:
-                artist_info = sp.artist(artist_id)
-                redis_client.setex(artist_cache_key, 3600, json.dumps(artist_info))  # 1時間キャッシュ
-            except Exception as e:
-                print(f"⚠️ Artist fetch failed ({artist['name']}):", e)
-                continue
-
+        artist_info = sp.artist(artist["id"])
         genre = artist_info.get("genres", [])
+
         album_image_url_box.append(track['album']['images'][0]['url'])
         influenced_word_box.append(track['name'])
         influenced_word_box.append(artist['name'])
+
         print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
 
         for i in genre:
@@ -198,16 +198,15 @@ def generate_image(user_id):
     influenced_word = random.choice(influenced_word_box)
     album_image_url = random.choice(album_image_url_box)
 
-    print(f"\n🏆 あなたの音楽定義スコア: {definition_score}")
-    print(character_animal)
-    print(influenced_word)
-    print(album_image_url)
+    print(f"\n🏆 あなたの音楽スコア: {definition_score}")
+    print(f"動物: {character_animal}")
+    print(f"キーワード: {influenced_word}")
+    print(f"アルバム画像: {album_image_url}")
 
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
-    img = Image.open(base_image_path)
-    new_img = img.resize((768, 1024))
+    img = Image.open(base_image_path).resize((768, 1024))
     buffer = BytesIO()
-    new_img.save(buffer, format="PNG")
+    img.save(buffer, format="PNG")
     image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     image_data_uri = f"data:image/png;base64,{image_b64}"
 
@@ -269,25 +268,16 @@ def generate_page(user_id):
 @app.route("/result/<prediction_id>", methods=["GET"])
 def get_result(prediction_id):
 
-    headers = {
-        "Authorization": f"Token {REPLICATE_API_TOKEN}",
-    }
+    headers = {"Authorization": f"Token {REPLICATE_API_TOKEN}"}
     res = requests.get(f"https://api.replicate.com/v1/predictions/{prediction_id}", headers=headers)
     if res.status_code != 200:
         return f"Failed to fetch prediction: {res.text}", 500
 
     data = res.json()
-    if data["status"] == "succeeded":
-        # 出力URLを返す
-        return jsonify({
-            "status": data["status"],
-            "image_url": data["output"][0]
-        })
-    else:
-        return jsonify({
-            "status": data["status"],
-            "image_url": None
-        })
+    return jsonify({
+        "status": data["status"],
+        "image_url": data["output"][0] if data["status"] == "succeeded" else None
+    })
 
 # =====================
 # PWA用ファイル・静的配信
