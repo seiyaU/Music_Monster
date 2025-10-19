@@ -178,10 +178,16 @@ def generate_image(user_id):
         character_animal = "snake"
     elif definition_score <= 7000:
         character_animal = "horse"
+    elif definition_score <= 7000:
+        character_animal = "orangutan"
     elif definition_score <= 8000:
         character_animal = "seal"
+    elif definition_score <= 8500:
+        character_animal = "dolphin"
     elif definition_score <= 9000:
         character_animal = "dog"
+    elif definition_score <= 9500:
+        character_animal = "lion"
     elif definition_score <= 10000:
         character_animal = "T-rex"
     elif definition_score <= 11000:
@@ -190,7 +196,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "bug"
+        character_animal = "dolphin"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
