@@ -327,7 +327,9 @@ def get_result(prediction_id):
     # ✅ 生成された画像URLを取得
     image_url = data["output"][0]
     response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content)).convert("RGBA")
+    img = Image.open(BytesIO(response.content)).convert("RGB")
+    img = img.convert("RGBA")  # RGBAに戻す（透明合成OKにする）
+
 
     # =============================
     # ✨ ホログラム風エフェクト生成処理
@@ -406,13 +408,15 @@ def get_result(prediction_id):
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
-    title_layer.putalpha(230)
+    title_layer.putalpha(180)
     
     # 💫 発光エフェクト
     glow = title_layer.filter(ImageFilter.GaussianBlur(6))
     glow = ImageEnhance.Brightness(glow).enhance(1.6)
-    holo = Image.alpha_composite(holo, glow)
+    # 💫 タイトルを先に重ねてから、発光エフェクトで全体を包む
     holo = Image.alpha_composite(holo, title_layer)
+    holo = Image.alpha_composite(holo, glow)
+
 
     # =============================
     # 🔠 カードIDを右下に寄せて描画
