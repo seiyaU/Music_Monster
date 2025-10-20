@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "penguin"
+        character_animal = "fish-market"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -366,16 +366,37 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:6].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 60)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 100)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 32)
     except:
         font_title = ImageFont.load_default()
         font_info = ImageFont.load_default()
 
-    # 半透明の帯（タイトル背景）
-    #band_height = 130
-    #band = Image.new("RGBA", (width, band_height), (0, 0, 0, 140))
-    #holo.paste(band, (0, 0), band)
+    # タイトルを描画する位置
+    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
+    tw = title_bbox[2] - title_bbox[0]
+    th = title_bbox[3] - title_bbox[1]
+    x_pos = (width - tw) / 2
+    y_pos = 25
+
+    # 🌈 虹色グラデーション文字描画
+    gradient_colors = [
+        (255, 0, 0),     # 赤
+        (255, 127, 0),   # オレンジ
+        (255, 255, 0),   # 黄
+        (0, 255, 0),     # 緑
+        (0, 0, 255),     # 青
+        (75, 0, 130),    # 藍
+        (148, 0, 211)    # 紫
+    ]
+
+    # 各文字に色をつける
+    for i, char in enumerate(ai_title):
+        color = gradient_colors[i % len(gradient_colors)]
+        draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
+        # 次の文字の横位置を取得
+        char_width = draw.textbbox((0,0), char, font=font_title)[2] - draw.textbbox((0,0), char, font=font_title)[0]
+        x_pos += char_width
 
     # タイトル配置（中央上部）
     title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
