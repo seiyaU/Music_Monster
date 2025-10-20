@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "fish-market"
+        character_animal = "parrot"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -367,7 +367,7 @@ def get_result(prediction_id):
 
     try:
         font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 100)
-        font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 32)
+        font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 20)
     except:
         font_title = ImageFont.load_default()
         font_info = ImageFont.load_default()
@@ -404,12 +404,43 @@ def get_result(prediction_id):
     th = title_bbox[3] - title_bbox[1]
     draw.text(((width - tw) / 2, 25), ai_title, font=font_title, fill=(255, 255, 255, 240))
 
-    # 下部情報（ユーザー名とカードID）
-    info_text = f"by @{user_name}    {card_id}"
+    # 下部情報（カードID）
+    info_text = f"{card_id}"
     info_bbox = draw.textbbox((0, 0), info_text, font=font_info)
     iw = info_bbox[2] - info_bbox[0]
     ih = info_bbox[3] - info_bbox[1]
     draw.text(((width - iw) / 2, height - ih - 40), info_text, font=font_info, fill=(255, 255, 255, 220))
+
+    # フォント設定
+    font_title = ImageFont.truetype("static/fonts/Eckmannpsych-Regular.ttf", 100)
+    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
+    tw = title_bbox[2] - title_bbox[0]
+    th = title_bbox[3] - title_bbox[1]
+    x_pos = (width - tw) / 2
+    y_pos = 25
+
+    # 虹色文字レイヤー
+    gradient_colors = [(255,0,0),(255,127,0),(255,255,0),(0,255,0),(0,0,255),(75,0,130),(148,0,211)]
+    title_layer = Image.new("RGBA", holo.size, (0,0,0,0))
+    title_draw = ImageDraw.Draw(title_layer)
+
+    for i, char in enumerate(ai_title):
+        color = gradient_colors[i % len(gradient_colors)]
+        title_draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
+        cw = title_draw.textbbox((0, 0), char, font=font_title)[2]
+        x_pos += cw
+
+    # 🎛 同じフィルターを文字にも適用
+    title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
+    title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
+    title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
+    title_layer.putalpha(230)
+
+    # 💥 発光エフェクト
+    glow = title_layer.filter(ImageFilter.GaussianBlur(6))
+    glow = ImageEnhance.Brightness(glow).enhance(1.6)
+    holo = Image.alpha_composite(holo, glow)
+    holo = Image.alpha_composite(holo, title_layer)
 
     # =============================
     # 保存処理
