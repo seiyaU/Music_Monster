@@ -370,7 +370,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:6].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 100)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 30)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 20)
     except:
         font_title = ImageFont.load_default()
@@ -405,14 +405,13 @@ def get_result(prediction_id):
         x_pos += char_width
 
     # 🎛 タイトルにフィルター適用（背景と同じ質感に）
-    # 🎛 タイトルにフィルター適用（背景と同じ質感に）
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
 
     # ✅ 透明度設定を「タイトル専用」に閉じ込める
     title_layer_with_alpha = title_layer.copy()
-    title_layer_with_alpha.putalpha(180)
+    title_layer_with_alpha.putalpha(100)
     
     # 💫 glowを生成
     glow = title_layer_with_alpha.filter(ImageFilter.GaussianBlur(6))
