@@ -168,17 +168,29 @@ def generate_image(user_id):
         character_animal = "bug"
     elif definition_score <= 2000:
         character_animal = "fish"
+    elif definition_score <= 2500:
+        character_animal = "squid"
     elif definition_score <= 3000:
-        character_animal = "octopus"    
+        character_animal = "crab"    
+    elif definition_score <= 3500:
+        character_animal = "octopus"  
     elif definition_score <= 4000:
-        character_animal = "crab"
+        character_animal = "shark"
+    elif definition_score <= 4000:
+        character_animal = "parrot-fish"
     elif definition_score <= 5000:
         character_animal = "frog"
     elif definition_score <= 6000:
         character_animal = "snake"
-    elif definition_score <= 7000:
+    elif definition_score <= 6300:
+        character_animal = "fish-market"
+    elif definition_score <= 6500:
         character_animal = "horse"
     elif definition_score <= 7000:
+        character_animal = "giraffe"
+    elif definition_score <= 7200:
+        character_animal = "sloth"
+    elif definition_score <= 7500:
         character_animal = "orangutan"
     elif definition_score <= 8000:
         character_animal = "seal"
@@ -186,12 +198,22 @@ def generate_image(user_id):
         character_animal = "dolphin"
     elif definition_score <= 9000:
         character_animal = "dog"
+    elif definition_score <= 9300:
+        character_animal = "penguin"
     elif definition_score <= 9500:
         character_animal = "lion"
+    elif definition_score <= 9800:
+        character_animal = "pelican"
     elif definition_score <= 10000:
         character_animal = "T-rex"
+    elif definition_score <= 10500:
+        character_animal = "parrot"
     elif definition_score <= 11000:
         character_animal = "cat"
+    elif definition_score <= 11500:
+        character_animal = "toy-dog"
+    elif definition_score <= 12000:
+        character_animal = "love-cat"
     else:
         character_animal = "dragon"
 
@@ -219,8 +241,8 @@ def generate_image(user_id):
 
     prompt = (
         f"Legendary creature in {character_animal} of picture is a soldier or knight of alien has some weapons and from a dark and mysterious world."
-        f"It like {influenced_word} and background image is {album_image_url} "
-        f"and designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
+        f"It has some factor relevant to the phrase of {influenced_word}. Background image is {album_image_url} "
+        f"It is also designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
     )
     print(prompt)
 
