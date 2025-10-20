@@ -349,10 +349,14 @@ def get_result(prediction_id):
 
     print(f"✅ ホログラム画像を生成: {output_path}")
 
+    # ✅ 絶対URLを構築（Renderでも動作）
+    base_url = request.host_url.rstrip("/")
+    full_image_url = f"{base_url}/{output_path}"
+
     # 返却
     return jsonify({
         "status": "succeeded",
-        "image_url": f"/{output_path}"
+        "image_url": full_image_url
     })
 
 # =====================
