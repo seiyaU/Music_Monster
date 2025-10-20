@@ -72,7 +72,6 @@
         console.log("🟣 API response status:", res.status);
 
         if (res.status === 401) {
-          // ログインが必要な場合
           window.location.href = "/login";
           return; 
         }
@@ -124,6 +123,19 @@
 
       check();
     }
+
+    // ===============================
+    // ✅ Service Worker の登録処理
+    // ===============================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const reg = await navigator.serviceWorker.register('/serviceWorker.js');
+          console.log('🟢 Service Worker registered:', reg.scope);
+        } catch (err) {
+          console.warn('⚠️ Service Worker registration failed:', err);
+        }
+      });
 
     startGeneration();
   </script>

@@ -23,10 +23,11 @@ app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_REDIS"] = redis_client
 app.config["SESSION_KEY_PREFIX"] = "spotify_session:"  # ✅ ユーザー単位で独立
 app.config["SESSION_COOKIE_NAME"] = "spotify_user_session"  # ✅ クッキー名も固有
-app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_PERMANENT"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
 app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 
 Session(app)
