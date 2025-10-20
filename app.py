@@ -368,12 +368,16 @@ def get_result(prediction_id):
     holo.paste(band, (0, 0), band)
 
     # タイトル配置（中央上部）
-    tw, th = draw.textsize(ai_title, font=font_title)
+    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
+    tw = title_bbox[2] - title_bbox[0]
+    th = title_bbox[3] - title_bbox[1]
     draw.text(((width - tw) / 2, 25), ai_title, font=font_title, fill=(255, 255, 255, 240))
 
     # 下部情報（ユーザー名とカードID）
     info_text = f"by @{user_name}    {card_id}"
-    iw, ih = draw.textsize(info_text, font=font_info)
+    info_bbox = draw.textbbox((0, 0), info_text, font=font_info)
+    iw = info_bbox[2] - info_bbox[0]
+    ih = info_bbox[3] - info_bbox[1]
     draw.text(((width - iw) / 2, height - ih - 40), info_text, font=font_info, fill=(255, 255, 255, 220))
 
     # =============================
