@@ -408,7 +408,7 @@ def get_result(prediction_id):
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
-    title_layer.putalpha(180)
+    title_layer.putalpha(10)
     
     # 💫 発光エフェクト
     glow = title_layer.filter(ImageFilter.GaussianBlur(6))
