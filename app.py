@@ -297,6 +297,7 @@ def generate_image(user_id):
 
     # 🧠 creature_name をセッションに保存（後でタイトルに使う）
     session["creature_name"] = creature_name
+    session["atk"] = atk
 
     return jsonify({
         "prediction_id": prediction["id"],
@@ -362,6 +363,7 @@ def get_result(prediction_id):
 
     # ✅ generate_api で作成した creature_name をそのままタイトルとして使用
     ai_title = session.get("creature_name", "Unknown Creature")
+    atk = session.get("atk", "0")
     user_name = session.get("user_id", "UnknownUser")
     card_id = f"#{prediction_id[:6].upper()}"
 
@@ -395,9 +397,9 @@ def get_result(prediction_id):
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
         color = gradient_colors[i % len(gradient_colors)]
-        draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
+        title_draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
         # 次の文字の横位置を取得
-        char_width = draw.textbbox((0,0), char, font=font_title)[2] - draw.textbbox((0,0), char, font=font_title)[0]
+        char_width = title_draw.textbbox((0,0), char, font=font_title)[2] - title_draw.textbbox((0,0), char, font=font_title)[0]
         x_pos += char_width
 
     # 🎛 タイトルにフィルター適用（背景と同じ質感に）
