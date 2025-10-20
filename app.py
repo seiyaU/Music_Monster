@@ -244,7 +244,6 @@ def generate_image(user_id):
         creature_name = f"The {character_animal} of {influenced_word}"
     print(f"名前: {creature_name}")
 
-
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
     img = Image.open(base_image_path).resize((768, 1024))
     buffer = BytesIO()
@@ -295,6 +294,10 @@ def generate_image(user_id):
         return f"Image generation failed: {res.text}", 500
 
     prediction = res.json()
+
+    # 🧠 creature_name をセッションに保存（後でタイトルに使う）
+    session["creature_name"] = creature_name
+
     return jsonify({
         "prediction_id": prediction["id"],
         "status_url": f"/result/{prediction["id"]}"
@@ -357,11 +360,8 @@ def get_result(prediction_id):
     # =============================
     draw = ImageDraw.Draw(holo)
 
-    # AI風タイトルを自動生成
-    themes = ["Echo", "Dream", "Neon", "Shadow", "Pulse", "Crystal", "Tide", "Phantom"]
-    suffixes = ["Beast", "Guardian", "Soul", "Entity", "Knight", "Spirit", "Dragon"]
-    ai_title = f"{random.choice(themes)} {random.choice(suffixes)}"
-
+    # ✅ generate_api で作成した creature_name をそのままタイトルとして使用
+    ai_title = session.get("creature_name", "Unknown Creature")
     user_name = session.get("user_id", "UnknownUser")
     card_id = f"#{prediction_id[:6].upper()}"
 
@@ -372,8 +372,10 @@ def get_result(prediction_id):
         font_title = ImageFont.load_default()
         font_info = ImageFont.load_default()
 
-    # タイトルを描画する位置
-    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
+    # 🪄 タイトルを別レイヤーで生成
+    title_layer = Image.new("RGBA", holo.size, (0, 0, 0, 0))
+    title_draw = ImageDraw.Draw(title_layer)
+    title_bbox = title_draw.textbbox((0, 0), ai_title, font=font_title)
     tw = title_bbox[2] - title_bbox[0]
     th = title_bbox[3] - title_bbox[1]
     x_pos = (width - tw) / 2
@@ -398,49 +400,34 @@ def get_result(prediction_id):
         char_width = draw.textbbox((0,0), char, font=font_title)[2] - draw.textbbox((0,0), char, font=font_title)[0]
         x_pos += char_width
 
-    # タイトル配置（中央上部）
-    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
-    tw = title_bbox[2] - title_bbox[0]
-    th = title_bbox[3] - title_bbox[1]
-    draw.text(((width - tw) / 2, 25), ai_title, font=font_title, fill=(255, 255, 255, 240))
-
-    # 下部情報（カードID）
-    info_text = f"{card_id}"
-    info_bbox = draw.textbbox((0, 0), info_text, font=font_info)
-    iw = info_bbox[2] - info_bbox[0]
-    ih = info_bbox[3] - info_bbox[1]
-    draw.text(((width - iw) / 2, height - ih - 40), info_text, font=font_info, fill=(255, 255, 255, 220))
-
-    # フォント設定
-    font_title = ImageFont.truetype("static/fonts/Eckmannpsych-Regular.ttf", 100)
-    title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
-    tw = title_bbox[2] - title_bbox[0]
-    th = title_bbox[3] - title_bbox[1]
-    x_pos = (width - tw) / 2
-    y_pos = 25
-
-    # 虹色文字レイヤー
-    gradient_colors = [(255,0,0),(255,127,0),(255,255,0),(0,255,0),(0,0,255),(75,0,130),(148,0,211)]
-    title_layer = Image.new("RGBA", holo.size, (0,0,0,0))
-    title_draw = ImageDraw.Draw(title_layer)
-
-    for i, char in enumerate(ai_title):
-        color = gradient_colors[i % len(gradient_colors)]
-        title_draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
-        cw = title_draw.textbbox((0, 0), char, font=font_title)[2]
-        x_pos += cw
-
-    # 🎛 同じフィルターを文字にも適用
+    # 🎛 タイトルにフィルター適用（背景と同じ質感に）
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
     title_layer.putalpha(230)
-
-    # 💥 発光エフェクト
+    
+    # 💫 発光エフェクト
     glow = title_layer.filter(ImageFilter.GaussianBlur(6))
     glow = ImageEnhance.Brightness(glow).enhance(1.6)
     holo = Image.alpha_composite(holo, glow)
     holo = Image.alpha_composite(holo, title_layer)
+
+    # =============================
+    # 🔠 カードIDを右下に寄せて描画
+    # =============================
+    draw = ImageDraw.Draw(holo)
+    info_text = f"{card_id}"
+    info_bbox = draw.textbbox((0, 0), info_text, font=font_info)
+    iw = info_bbox[2] - info_bbox[0]
+    ih = info_bbox[3] - info_bbox[1]
+
+    # 📍右下寄せに配置
+    margin = 40
+    x_right = width - iw - margin
+    y_bottom = height - ih - margin
+    draw.text((x_right, y_bottom), info_text, font=font_info, fill=(255, 255, 255, 230))
+
+    
 
     # =============================
     # 保存処理
