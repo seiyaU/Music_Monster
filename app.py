@@ -366,16 +366,16 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:6].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Orbitron-Bold.ttf", 60)
-        font_info = ImageFont.truetype("static/fonts/NotoSans-Regular.ttf", 32)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 60)
+        font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 32)
     except:
         font_title = ImageFont.load_default()
         font_info = ImageFont.load_default()
 
     # 半透明の帯（タイトル背景）
-    band_height = 130
-    band = Image.new("RGBA", (width, band_height), (0, 0, 0, 140))
-    holo.paste(band, (0, 0), band)
+    #band_height = 130
+    #band = Image.new("RGBA", (width, band_height), (0, 0, 0, 140))
+    #holo.paste(band, (0, 0), band)
 
     # タイトル配置（中央上部）
     title_bbox = draw.textbbox((0, 0), ai_title, font=font_title)
