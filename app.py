@@ -9,7 +9,7 @@ from flask_session import Session
 import redis
 import time
 import yaml
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageDraw, ImageFont
 from io import BytesIO
 import json
 import numpy as np  # ✅ ノイズ生成に利用
@@ -342,21 +342,57 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
 
-    # 一時ファイル保存
+    # =============================
+    # 🏷️ タイトル・ユーザー名・カードID描画
+    # =============================
+    draw = ImageDraw.Draw(holo)
+
+    # AI風タイトルを自動生成
+    themes = ["Echo", "Dream", "Neon", "Shadow", "Pulse", "Crystal", "Tide", "Phantom"]
+    suffixes = ["Beast", "Guardian", "Soul", "Entity", "Knight", "Spirit", "Dragon"]
+    ai_title = f"{random.choice(themes)} {random.choice(suffixes)}"
+
+    user_name = session.get("user_id", "UnknownUser")
+    card_id = f"#{prediction_id[:6].upper()}"
+
+    try:
+        font_title = ImageFont.truetype("static/fonts/Orbitron-Bold.ttf", 60)
+        font_info = ImageFont.truetype("static/fonts/NotoSans-Regular.ttf", 32)
+    except:
+        font_title = ImageFont.load_default()
+        font_info = ImageFont.load_default()
+
+    # 半透明の帯（タイトル背景）
+    band_height = 130
+    band = Image.new("RGBA", (width, band_height), (0, 0, 0, 140))
+    holo.paste(band, (0, 0), band)
+
+    # タイトル配置（中央上部）
+    tw, th = draw.textsize(ai_title, font=font_title)
+    draw.text(((width - tw) / 2, 25), ai_title, font=font_title, fill=(255, 255, 255, 240))
+
+    # 下部情報（ユーザー名とカードID）
+    info_text = f"by @{user_name}    {card_id}"
+    iw, ih = draw.textsize(info_text, font=font_info)
+    draw.text(((width - iw) / 2, height - ih - 40), info_text, font=font_info, fill=(255, 255, 255, 220))
+
+    # =============================
+    # 保存処理
+    # =============================
     output_path = f"static/generated/hologram_{prediction_id}.png"
     os.makedirs("static/generated", exist_ok=True)
     holo.save(output_path)
+    print(f"✅ タイトル付きホログラム画像を生成: {output_path}")
 
-    print(f"✅ ホログラム画像を生成: {output_path}")
-
-    # ✅ 絶対URLを構築（Renderでも動作）
     base_url = request.host_url.rstrip("/")
     full_image_url = f"{base_url}/{output_path}"
 
-    # 返却
     return jsonify({
         "status": "succeeded",
-        "image_url": full_image_url
+        "image_url": full_image_url,
+        "title": ai_title,
+        "card_id": card_id,
+        "user": user_name
     })
 
 # =====================
