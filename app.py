@@ -92,7 +92,9 @@ def callback():
 def generate_image(user_id):
 
     # ✅ セッション検証（他人のデータを防ぐ）
+    print("generate_apiが動いた")
     current_user = session.get("user_id")
+    print("セッションからユーザーを取得できた")
     if not current_user or current_user != user_id:
         print("❌ セッション不一致: 他ユーザーアクセス検出")
         return jsonify({"status": "login_required"}), 401
