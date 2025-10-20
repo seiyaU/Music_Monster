@@ -13,6 +13,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageDraw, ImageFont
 from io import BytesIO
 import json
 import numpy as np  # ✅ ノイズ生成に利用
+from decimal import Decimal
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
@@ -143,6 +144,7 @@ def generate_image(user_id):
     definition_score = 0
     influenced_word_box = []
     album_image_url_box = []
+    creature_name = ""
 
     
     print("\n🎵 最近再生した曲:")
@@ -221,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "sloth"
+        character_animal = "penguin"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -234,6 +236,14 @@ def generate_image(user_id):
     print(f"動物: {character_animal}")
     print(f"キーワード: {influenced_word}")
     print(f"アルバム画像: {album_image_url}")
+    atk = int(Decimal(definition_score).quantize(Decimal('1e2')))
+    print(f"攻撃力: {atk}")
+    if len(influenced_word.split())<=2:
+        creature_name = f"{influenced_word} {character_animal}"
+    else:  
+        creature_name = f"The {character_animal} of {influenced_word}"
+    print(f"名前: {creature_name}")
+
 
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
     img = Image.open(base_image_path).resize((768, 1024))
