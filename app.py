@@ -405,17 +405,23 @@ def get_result(prediction_id):
         x_pos += char_width
 
     # 🎛 タイトルにフィルター適用（背景と同じ質感に）
+    # 🎛 タイトルにフィルター適用（背景と同じ質感に）
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
-    title_layer.putalpha(70)
+
+    # ✅ 透明度設定を「タイトル専用」に閉じ込める
+    title_layer_with_alpha = title_layer.copy()
+    title_layer_with_alpha.putalpha(180)
     
-    # 💫 発光エフェクト
-    glow = title_layer.filter(ImageFilter.GaussianBlur(6))
+    # 💫 glowを生成
+    glow = title_layer_with_alpha.filter(ImageFilter.GaussianBlur(6))
     glow = ImageEnhance.Brightness(glow).enhance(1.6)
-    # 💫 タイトルを先に重ねてから、発光エフェクトで全体を包む
-    holo = Image.alpha_composite(holo, title_layer)
-    holo = Image.alpha_composite(holo, glow)
+
+    # ✅ 最後に holo と別合成
+    composited = holo.copy()
+    composited = Image.alpha_composite(composited, glow)
+    composited = Image.alpha_composite(composited, title_layer_with_alpha)
 
 
     # =============================
@@ -440,7 +446,7 @@ def get_result(prediction_id):
     # =============================
     output_path = f"static/generated/hologram_{prediction_id}.png"
     os.makedirs("static/generated", exist_ok=True)
-    holo.save(output_path)
+    composited.save(output_path)
     print(f"✅ タイトル付きホログラム画像を生成: {output_path}")
 
     base_url = request.host_url.rstrip("/")
