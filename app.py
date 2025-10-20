@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "parrot"
+        character_animal = "parrot-fish"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -408,7 +408,7 @@ def get_result(prediction_id):
     title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
     title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
     title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
-    title_layer.putalpha(10)
+    title_layer.putalpha(70)
     
     # 💫 発光エフェクト
     glow = title_layer.filter(ImageFilter.GaussianBlur(6))
