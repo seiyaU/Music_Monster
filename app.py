@@ -225,7 +225,7 @@ def generate_image(user_id):
         elif definition_score <= 7000:
             character_animal = "octopus"  
         elif definition_score <= 7200:
-            character_animal = "horse"
+            character_animal = "parrot-fish"
         elif definition_score <= 7400:
             character_animal = "shark"
         elif definition_score <= 7600:
@@ -235,7 +235,7 @@ def generate_image(user_id):
         elif definition_score <= 8000:
             character_animal = "fish-market"
         elif definition_score <= 8200:
-            character_animal = "parrot-fish"
+            character_animal = "horse"
         elif definition_score <= 8400:
             character_animal = "giraffe"
         elif definition_score <= 8600:
@@ -267,8 +267,8 @@ def generate_image(user_id):
         else:
             character_animal = "dragon"
 
-        #if user_id == "noel1109.marble1101":
-        #    character_animal = "seal"
+        if user_id == "noel1109.marble1101":
+            character_animal = "seal"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
@@ -337,7 +337,7 @@ def generate_image(user_id):
             "input": {
                 "prompt": prompt,
                 "image": image_data_uri,
-                "strength": 0.6,
+                "strength": 0.9,
                 "num_outputs": 1,
                 "aspect_ratio": "3:4"
             }
@@ -429,7 +429,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:8].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 55)
+        font_title = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 50)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 10)
     except:
         font_title = ImageFont.load_default()
@@ -443,7 +443,7 @@ def get_result(prediction_id):
     tw = title_bbox[2] - title_bbox[0]
     th = title_bbox[3] - title_bbox[1]
     x_pos = (width - tw) / 2
-    y_pos = 25
+    y_pos = 15
 
     # 🌈 虹色グラデーション文字描画
     gradient_colors = [
@@ -464,7 +464,7 @@ def get_result(prediction_id):
 
     # 描画位置を最初に戻す
     x_pos = (holo.width - tw) / 2
-    y_pos = 25
+    y_pos = 15
 
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
@@ -495,8 +495,8 @@ def get_result(prediction_id):
     # 🎛 タイトル専用フィルターを適用
     filtered_title = title_layer.copy()
     filtered_title = filtered_title.filter(ImageFilter.SMOOTH_MORE)
-    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.9)
-    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.9)
+    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.8)
+    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.8)
     
     # 💫 glowを生成
     glow = filtered_title.filter(ImageFilter.GaussianBlur(6))
