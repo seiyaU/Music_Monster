@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "love-cat"
+        character_animal = "toy-dog"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -390,8 +390,8 @@ def get_result(prediction_id):
     gradient_colors = [
         (255, 0, 0),     # 赤
         (255, 127, 70),   # オレンジ
-        (255, 255, 70),   # 黄
-        (100, 255, 70),     # 緑
+        (200, 200, 70),   # 黄
+        (100, 230, 70),     # 緑
         (0, 0, 255),     # 青
         (75, 0, 130),    # 藍
         (148, 0, 211)    # 紫
@@ -466,7 +466,7 @@ def get_result(prediction_id):
     # 位置：カードID の上に来るように調整（マージンで調整可）
     margin = 40
     x_atk = width - atk_w - margin
-    y_atk = height - atk_h - margin - 60  # IDの上に配置（60px 上）
+    y_atk = height - atk_h - margin - 40  # IDの上に配置（60px 上）
 
     # 描画（シャドウ・白枠・虹色）
     x_write = x_atk
