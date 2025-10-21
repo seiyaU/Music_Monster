@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "pelican"
+        character_animal = "squid"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -366,11 +366,11 @@ def get_result(prediction_id):
     ai_title = session.get("creature_name", "Unknown Creature")
     atk = session.get("atk", "0")
     user_name = session.get("user_id", "UnknownUser")
-    card_id = f"#{prediction_id[:6].upper()}"
+    card_id = f"#{prediction_id[:8].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 60)
-        font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 20)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 50)
+        font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 10)
     except:
         font_title = ImageFont.load_default()
         font_info = ImageFont.load_default()
@@ -389,8 +389,8 @@ def get_result(prediction_id):
     gradient_colors = [
         (255, 0, 0),     # 赤
         (255, 127, 0),   # オレンジ
-        (255, 255, 0),   # 黄
-        (0, 255, 0),     # 緑
+        (255, 255, 30),   # 黄
+        (30, 255, 30),     # 緑
         (0, 0, 255),     # 青
         (75, 0, 130),    # 藍
         (148, 0, 211)    # 紫
