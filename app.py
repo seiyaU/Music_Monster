@@ -370,7 +370,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:6].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 30)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 90)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 20)
     except:
         font_title = ImageFont.load_default()
@@ -379,6 +379,7 @@ def get_result(prediction_id):
     # 🪄 タイトルを別レイヤーで生成
     title_layer = Image.new("RGBA", holo.size, (0, 0, 0, 0))
     title_draw = ImageDraw.Draw(title_layer)
+
     title_bbox = title_draw.textbbox((0, 0), ai_title, font=font_title)
     tw = title_bbox[2] - title_bbox[0]
     th = title_bbox[3] - title_bbox[1]
@@ -404,48 +405,42 @@ def get_result(prediction_id):
         char_width = title_draw.textbbox((0,0), char, font=font_title)[2] - title_draw.textbbox((0,0), char, font=font_title)[0]
         x_pos += char_width
 
-    # 🎛 タイトルにフィルター適用（背景と同じ質感に）
-    title_layer = title_layer.filter(ImageFilter.SMOOTH_MORE)
-    title_layer = ImageEnhance.Brightness(title_layer).enhance(1.05)
-    title_layer = ImageEnhance.Contrast(title_layer).enhance(1.1)
-
-    # ✅ 透明度設定を「タイトル専用」に閉じ込める
-    title_layer_with_alpha = title_layer.copy()
-    title_layer_with_alpha.putalpha(100)
+    # 🎛 タイトル専用フィルターを適用
+    filtered_title = title_layer.copy()
+    filtered_title = filtered_title.filter(ImageFilter.SMOOTH_MORE)
+    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(1.05)
+    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(1.1)
     
     # 💫 glowを生成
-    glow = title_layer_with_alpha.filter(ImageFilter.GaussianBlur(6))
+    glow = filtered_title.filter(ImageFilter.GaussianBlur(6))
     glow = ImageEnhance.Brightness(glow).enhance(1.6)
 
-    # ✅ 最後に holo と別合成
-    composited = holo.copy()
-    composited = Image.alpha_composite(composited, glow)
-    composited = Image.alpha_composite(composited, title_layer_with_alpha)
-
+    # ✅ 背景（holo）には一切影響を与えず、ここで初めて合成
+    final_image = holo.copy()
+    final_image = Image.alpha_composite(final_image, glow)
+    final_image = Image.alpha_composite(final_image, filtered_title)
 
     # =============================
     # 🔠 カードIDを右下に寄せて描画
     # =============================
-    draw = ImageDraw.Draw(holo)
+    draw_final = ImageDraw.Draw(final_image)
     info_text = f"{card_id}"
-    info_bbox = draw.textbbox((0, 0), info_text, font=font_info)
+    info_bbox = draw_final.textbbox((0, 0), info_text, font=font_info)
     iw = info_bbox[2] - info_bbox[0]
     ih = info_bbox[3] - info_bbox[1]
-
-    # 📍右下寄せに配置
-    margin = 40
-    x_right = width - iw - margin
-    y_bottom = height - ih - margin
-    draw.text((x_right, y_bottom), info_text, font=font_info, fill=(255, 255, 255, 230))
-
-    
+    draw_final.text(
+        (final_image.width - iw - 40, final_image.height - ih - 40),
+        info_text,
+        font=font_info,
+        fill=(255, 255, 255, 230)
+    )
 
     # =============================
     # 保存処理
     # =============================
     output_path = f"static/generated/hologram_{prediction_id}.png"
     os.makedirs("static/generated", exist_ok=True)
-    composited.save(output_path)
+    final_image.save(output_path)
     print(f"✅ タイトル付きホログラム画像を生成: {output_path}")
 
     base_url = request.host_url.rstrip("/")
