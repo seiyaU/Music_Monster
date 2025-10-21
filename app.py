@@ -488,7 +488,7 @@ def get_result(prediction_id):
     filtered_atk = filtered_atk.filter(ImageFilter.SMOOTH_MORE)
     filtered_atk = ImageEnhance.Brightness(filtered_atk).enhance(0.95)
     filtered_atk = ImageEnhance.Contrast(filtered_atk).enhance(1.05)
-    filtered_atk.putalpha(230)
+    #filtered_atk.putalpha(230)
 
     atk_glow = filtered_atk.filter(ImageFilter.GaussianBlur(6))
     atk_glow = ImageEnhance.Brightness(atk_glow).enhance(1.6)
