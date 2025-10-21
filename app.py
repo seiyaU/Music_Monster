@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "parrot-fish"
+        character_animal = "shark"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -330,7 +330,6 @@ def get_result(prediction_id):
     img = Image.open(BytesIO(response.content)).convert("RGB")
     img = img.convert("RGBA")  # RGBAに戻す（透明合成OKにする）
 
-
     # =============================
     # ✨ ホログラム風エフェクト生成処理
     # =============================
@@ -370,7 +369,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:6].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 90)
+        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 60)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 20)
     except:
         font_title = ImageFont.load_default()
@@ -408,8 +407,8 @@ def get_result(prediction_id):
     # 🎛 タイトル専用フィルターを適用
     filtered_title = title_layer.copy()
     filtered_title = filtered_title.filter(ImageFilter.SMOOTH_MORE)
-    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(1.05)
-    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(1.1)
+    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.9)
+    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.9)
     
     # 💫 glowを生成
     glow = filtered_title.filter(ImageFilter.GaussianBlur(6))
