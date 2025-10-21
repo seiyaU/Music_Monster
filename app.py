@@ -89,6 +89,16 @@ def callback():
     print(f"✅ 認証成功: {user_id}")
     return redirect(f"/generate/{user_id}")
 
+# =====================
+# セッション確認API（フロントの「Start with Spotify」用）
+# =====================
+@app.route("/session-check")
+def session_check():
+    user_id = session.get("user_id")
+    if user_id:
+        return jsonify({"logged_in": True, "user_id": user_id})
+    return jsonify({"logged_in": False})
+
 # AI画像生成エンドポイント
 @app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
@@ -300,6 +310,8 @@ def generate_image(user_id):
         }
 
         MODEL_VERSION = random.choice([
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
