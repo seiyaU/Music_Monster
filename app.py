@@ -108,9 +108,6 @@ def generate_image(user_id):
         session["access_token"] = new_token["access_token"]
         session["expires_at"] = new_token["expires_at"]
     
-    print("トークン有効期限チェック完了")
-
-
     access_token = session.get("access_token")
     if not access_token:
         return jsonify({"error": "No valid access token"}), 401
@@ -132,6 +129,7 @@ def generate_image(user_id):
         print("🟠 Spotify APIから再生履歴を取得")
         try:
             recent = sp.current_user_recently_played(limit=50)
+            redis_client.setex(cache_key, 3600, json.dumps(recent))  # 1時間キャッシュ
         except Exception as e:
             print("🚨 Spotify API error:", e)
             return jsonify({"error": "Spotify data fetch failed"}), 500
@@ -141,34 +139,67 @@ def generate_image(user_id):
     
     # ✅ Redis に保存（10分キャッシュ）
     redis_client.setex(cache_key, 3600, json.dumps(recent))
-    print(f"✅ キャッシュ保存: {user_id}")
 
     # 🎨 ベースとなるテンプレート画像を選択
     definition_score = 0
     influenced_word_box = []
     album_image_url_box = []
     creature_name = ""
+    artist_ids = set()
 
     
     print("\n🎵 最近再生した曲:")
-    for idx, item in enumerate(recent["items"], 1):
-        track = item["track"]
+    # 🎵 アーティストIDを抽出（重複除去）
+    for item in recent["items"]:
         artist = item["track"]["artists"][0]
-        artist_info = sp.artist(artist["id"])
-        genre = artist_info.get("genres", [])
+        artist_ids.add(artist["id"])
+        track = item["track"]
+        genre = artist.get("genres", [])
 
         album_image_url_box.append(track['album']['images'][0]['url'])
         influenced_word_box.append(track['name'])
         influenced_word_box.append(artist['name'])
 
-        print(f"{idx}. {track['name']} / {artist['name']} ({', '.join(genre)})")
+        artist_ids = list(artist_ids)
 
-        for i in genre:
-            definition_score += genre_weights.get(i, 0)  # デフォルト値0
-            influenced_word_box.append(i)
-            print(f"   - {i}: {genre_weights.get(i, 0)}")
+        print(f"{track['name']} / {artist['name']} ({', '.join(genre)})")
+        # ===============================
+        # 🧠 アーティスト情報を一括取得＋キャッシュ
+        # ===============================
+        artist_info_box = []
+        uncached_ids = []
+        for aid in artist_ids:
+            cached_artist = redis_client.get(f"artist_info:{aid}")
+            if cached_artist:
+                artist_info_box.append(json.loads(cached_artist))
+            else:
+                uncached_ids.append(aid)
 
-        if artist["name"] == "The Beatles":
+        if uncached_ids:
+            print(f"🕐 Spotify APIに問い合わせ（未キャッシュ）: {len(uncached_ids)}件")
+            # 一括で取得（最大50件）
+            try:
+                batch_info = sp.artists(uncached_ids)["artists"]
+                for info in batch_info:
+                    redis_client.setex(f"artist_info:{info['id']}", 86400, json.dumps(info))  # 24hキャッシュ
+                artist_info_box.extend(batch_info)
+            except Exception as e:
+                print("🚨 Spotify artist API batch error:", e)
+                time.sleep(0.1)  # rate-limit保護
+        else:
+            print("✅ 全てキャッシュから取得")
+
+        print(f"🎨 アーティスト情報を{len(artist_info_box)}件読み込み完了")
+
+    # ===============================
+    # 🧮 定義スコア計算
+    # ===============================
+    for artist_info in artist_info_box:
+        genres = artist_info.get("genres", [])
+        for g in genres:
+            definition_score += genre_weights.get(g, 0)
+            influenced_word_box.append(g)
+        if artist_info["name"] == "The Beatles":
             definition_score += 30
 
     # 動物の確定
