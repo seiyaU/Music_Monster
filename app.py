@@ -217,7 +217,7 @@ def generate_image(user_id):
         elif definition_score <= 7200:
             character_animal = "horse"
         elif definition_score <= 7400:
-            character_animal = "parrot-fish"
+            character_animal = "shark"
         elif definition_score <= 7600:
             character_animal = "frog"
         elif definition_score <= 7800:
@@ -225,7 +225,7 @@ def generate_image(user_id):
         elif definition_score <= 8000:
             character_animal = "fish-market"
         elif definition_score <= 8200:
-            character_animal = "shark"
+            character_animal = "parrot-fish"
         elif definition_score <= 8400:
             character_animal = "giraffe"
         elif definition_score <= 8600:
