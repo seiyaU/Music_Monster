@@ -204,47 +204,47 @@ def generate_image(user_id):
                 definition_score += 30
 
         # 動物の確定
-        if definition_score <= 1000:
+        if definition_score <= 6000:
             character_animal = "bug"
-        elif definition_score <= 2000:
+        elif definition_score <= 6200:
             character_animal = "fish"
-        elif definition_score <= 2500:
+        elif definition_score <= 6400:
             character_animal = "squid"
-        elif definition_score <= 3000:
+        elif definition_score <= 6800:
             character_animal = "crab"    
-        elif definition_score <= 3500:
-            character_animal = "octopus"  
-        elif definition_score <= 4000:
-            character_animal = "shark"
-        elif definition_score <= 4000:
-            character_animal = "parrot-fish"
-        elif definition_score <= 5000:
-            character_animal = "frog"
-        elif definition_score <= 6000:
-            character_animal = "snake"
-        elif definition_score <= 6300:
-            character_animal = "fish-market"
-        elif definition_score <= 6500:
-            character_animal = "horse"
         elif definition_score <= 7000:
-            character_animal = "giraffe"
+            character_animal = "octopus"  
         elif definition_score <= 7200:
-            character_animal = "sloth"
-        elif definition_score <= 7500:
-            character_animal = "orangutan"
+            character_animal = "shark"
+        elif definition_score <= 7400:
+            character_animal = "parrot-fish"
+        elif definition_score <= 7600:
+            character_animal = "frog"
+        elif definition_score <= 7800:
+            character_animal = "snake"
         elif definition_score <= 8000:
-            character_animal = "seal"
-        elif definition_score <= 8500:
-            character_animal = "dolphin"
+            character_animal = "fish-market"
+        elif definition_score <= 8200:
+            character_animal = "horse"
+        elif definition_score <= 8400:
+            character_animal = "giraffe"
+        elif definition_score <= 8600:
+            character_animal = "sloth"
+        elif definition_score <= 8800:
+            character_animal = "orangutan"
         elif definition_score <= 9000:
+            character_animal = "seal"
+        elif definition_score <= 9200:
+            character_animal = "dolphin"
+        elif definition_score <= 9400:
             character_animal = "dog"
-        elif definition_score <= 9300:
+        elif definition_score <= 9600:
             character_animal = "penguin"
-        elif definition_score <= 9500:
+        elif definition_score <= 9700:
             character_animal = "lion"
         elif definition_score <= 9800:
             character_animal = "pelican"
-        elif definition_score <= 10000:
+        elif definition_score <= 9900:
             character_animal = "T-rex"
         elif definition_score <= 10500:
             character_animal = "parrot"
@@ -257,8 +257,8 @@ def generate_image(user_id):
         else:
             character_animal = "dragon"
 
-        if user_id == "noel1109.marble1101":
-            character_animal = "sloth"
+        #if user_id == "noel1109.marble1101":
+        #    character_animal = "seal"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
@@ -313,10 +313,11 @@ def generate_image(user_id):
             "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
-            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb"
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
+            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f"
         ])
         MODEL_VERSION ="bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
-        MODEL_VERSION ="15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f"
 
         payload = {
             "version": MODEL_VERSION,
