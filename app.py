@@ -14,6 +14,7 @@ from io import BytesIO
 import json
 import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
+import re
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
@@ -210,6 +211,7 @@ def generate_image(user_id):
                 definition_score += genre_weights.get(g, 0)
                 influenced_word_box.append(g)
                 print(g)
+                print(genre_weights.get(g))
             if artist_info["name"] == "The Beatles":
                 definition_score += 30
 
@@ -288,6 +290,9 @@ def generate_image(user_id):
         else:  
             creature_name = f"The {character_animal} of {influenced_word}"
         creature_name = creature_name.title()
+        # ✅ 正規表現で不要部分を削除
+        creature_name = re.sub(r"[\-\(\[].*?(Remaster|Live|Remix|Version).*?[\)\]]", "", creature_name, flags=re.IGNORECASE)
+        creature_name = re.sub(r"\s{2,}", " ", creature_name).strip()  # 余分なスペースを削除
         print(f"名前: {creature_name}")
 
         # 3:4 比率にリサイズ（幅768, 高さ1024など）
@@ -495,8 +500,8 @@ def get_result(prediction_id):
     # 🎛 タイトル専用フィルターを適用
     filtered_title = title_layer.copy()
     filtered_title = filtered_title.filter(ImageFilter.SMOOTH_MORE)
-    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.8)
-    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.8)
+    filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.9)
+    filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.9)
     
     # 💫 glowを生成
     glow = filtered_title.filter(ImageFilter.GaussianBlur(6))
