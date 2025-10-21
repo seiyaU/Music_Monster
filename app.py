@@ -145,7 +145,7 @@ def generate_image(user_id):
         influenced_word_box = []
         album_image_url_box = []
         creature_name = ""
-        artist_ids = set()
+        artist_ids = []
         artist_info_box = []
 
         
