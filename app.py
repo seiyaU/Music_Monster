@@ -215,7 +215,7 @@ def generate_image(user_id):
         elif definition_score <= 7000:
             character_animal = "octopus"  
         elif definition_score <= 7200:
-            character_animal = "shark"
+            character_animal = "horse"
         elif definition_score <= 7400:
             character_animal = "parrot-fish"
         elif definition_score <= 7600:
@@ -225,7 +225,7 @@ def generate_image(user_id):
         elif definition_score <= 8000:
             character_animal = "fish-market"
         elif definition_score <= 8200:
-            character_animal = "horse"
+            character_animal = "shark"
         elif definition_score <= 8400:
             character_animal = "giraffe"
         elif definition_score <= 8600:
@@ -315,9 +315,10 @@ def generate_image(user_id):
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
-            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f"
+            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
+            "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
         ])
-        MODEL_VERSION ="bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
+        print(MODEL_VERSION)
 
         payload = {
             "version": MODEL_VERSION,
