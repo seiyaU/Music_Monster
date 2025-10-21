@@ -153,7 +153,7 @@ def generate_image(user_id):
         # 🎵 アーティストIDを抽出（重複除去）
         for item in recent["items"]:
             artist = item["track"]["artists"][0]
-            artist_ids.add(artist["id"])
+            artist_ids.append(artist["id"])
             track = item["track"]
             genre = artist.get("genres", [])
 
