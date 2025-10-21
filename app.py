@@ -146,6 +146,7 @@ def generate_image(user_id):
         album_image_url_box = []
         creature_name = ""
         artist_ids = set()
+        artist_info_box = []
 
         
         print("\n🎵 最近再生した曲:")
