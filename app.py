@@ -112,7 +112,6 @@ def generate_image(user_id):
         if not access_token:
             return jsonify({"error": "No valid access token"}), 401
 
-        print("Spotifyからデータ取得開始")
         sp = Spotify(auth=access_token)
         print("Spotifyからデータ取得できた")
 
@@ -200,6 +199,7 @@ def generate_image(user_id):
             for g in genres:
                 definition_score += genre_weights.get(g, 0)
                 influenced_word_box.append(g)
+                print(g)
             if artist_info["name"] == "The Beatles":
                 definition_score += 30
 
@@ -258,7 +258,7 @@ def generate_image(user_id):
             character_animal = "dragon"
 
         if user_id == "noel1109.marble1101":
-            character_animal = "parrot-fish"
+            character_animal = "sloth"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
@@ -310,11 +310,13 @@ def generate_image(user_id):
             "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
             "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986",
             "d53918f6a274da520ba36474408999d2f91ea9c2c5afb17abef15c6c42030963",
-            "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
+            "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb"
         ])
         MODEL_VERSION ="bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
         MODEL_VERSION ="15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f"
-        MODEL_VERSION ="426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb"
 
         payload = {
             "version": MODEL_VERSION,
@@ -413,7 +415,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:8].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 50)
+        font_title = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 55)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 10)
     except:
         font_title = ImageFont.load_default()
@@ -509,7 +511,7 @@ def get_result(prediction_id):
     # 位置：カードID の上に来るように調整（マージンで調整可）
     margin = 40
     x_atk = width - atk_w - margin
-    y_atk = height - atk_h - margin - 40  # IDの上に配置（60px 上）
+    y_atk = height - atk_h - margin - 30  # IDの上に配置（60px 上）
 
     # 描画（シャドウ・白枠・虹色）
     x_write = x_atk
@@ -532,7 +534,6 @@ def get_result(prediction_id):
     filtered_atk = filtered_atk.filter(ImageFilter.SMOOTH_MORE)
     filtered_atk = ImageEnhance.Brightness(filtered_atk).enhance(0.95)
     filtered_atk = ImageEnhance.Contrast(filtered_atk).enhance(1.05)
-    #filtered_atk.putalpha(230)
 
     atk_glow = filtered_atk.filter(ImageFilter.GaussianBlur(6))
     atk_glow = ImageEnhance.Brightness(atk_glow).enhance(1.6)
@@ -551,7 +552,7 @@ def get_result(prediction_id):
     iw = info_bbox[2] - info_bbox[0]
     ih = info_bbox[3] - info_bbox[1]
     draw_final.text(
-        (final_image.width - iw - 40, final_image.height - ih - 40),
+        (final_image.width - iw - 40, final_image.height - ih - 20),
         info_text,
         font=font_info,
         fill=(255, 255, 255, 230)
