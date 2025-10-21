@@ -388,9 +388,9 @@ def get_result(prediction_id):
     # 🌈 虹色グラデーション文字描画
     gradient_colors = [
         (255, 0, 0),     # 赤
-        (255, 127, 0),   # オレンジ
-        (255, 255, 30),   # 黄
-        (30, 255, 30),     # 緑
+        (255, 127, 70),   # オレンジ
+        (255, 255, 70),   # 黄
+        (30, 255, 0),     # 緑
         (0, 0, 255),     # 青
         (75, 0, 130),    # 藍
         (148, 0, 211)    # 紫
@@ -409,7 +409,6 @@ def get_result(prediction_id):
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
         color = gradient_colors[i % len(gradient_colors)]
-        # --- 外枠を先に描画 ---
         # --- シャドウ ---
         title_draw.text(
             (x_pos + shadow_offset[0], y_pos + shadow_offset[1]),
@@ -447,6 +446,57 @@ def get_result(prediction_id):
     final_image = holo.copy()
     final_image = Image.alpha_composite(final_image, glow)
     final_image = Image.alpha_composite(final_image, filtered_title)
+
+    # -------------------------
+    # ATKレイヤー（タイトルと同様の処理）を作成して合成
+    # -------------------------
+    atk_text = f"ATK: {atk}"
+    try:
+        font_atk = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 44)
+    except Exception:
+        font_atk = ImageFont.load_default()
+
+    atk_layer = Image.new("RGBA", holo.size, (0,0,0,0))
+    atk_draw = ImageDraw.Draw(atk_layer)
+    atk_bbox = atk_draw.textbbox((0,0), atk_text, font=font_atk)
+    atk_w = atk_bbox[2] - atk_bbox[0]
+    atk_h = atk_bbox[3] - atk_bbox[1]
+
+    # 位置：カードID の上に来るように調整（マージンで調整可）
+    margin = 40
+    x_atk = width - atk_w - margin
+    y_atk = height - atk_h - margin - 60  # IDの上に配置（60px 上）
+
+    # 描画（シャドウ・白枠・虹色）
+    x_write = x_atk
+    for i, char in enumerate(atk_text):
+        color = gradient_colors[i % len(gradient_colors)]
+        # shadow
+        atk_draw.text((x_write + shadow_offset[0], y_atk + shadow_offset[1]), char, font=font_atk, fill=shadow_color)
+        # outline
+        for dx in range(-outline_width, outline_width + 1):
+            for dy in range(-outline_width, outline_width + 1):
+                if dx*dx + dy*dy <= outline_width*outline_width:
+                    atk_draw.text((x_write + dx, y_atk + dy), char, font=font_atk, fill=outline_color)
+        # main
+        atk_draw.text((x_write, y_atk), char, font=font_atk, fill=color + (255,))
+        cw = atk_draw.textbbox((0,0), char, font=font_atk)[2] - atk_draw.textbbox((0,0), char, font=font_atk)[0]
+        x_write += cw
+
+    # フィルタ・alpha・glow をタイトルと揃える
+    filtered_atk = atk_layer.copy()
+    filtered_atk = filtered_atk.filter(ImageFilter.SMOOTH_MORE)
+    filtered_atk = ImageEnhance.Brightness(filtered_atk).enhance(0.95)
+    filtered_atk = ImageEnhance.Contrast(filtered_atk).enhance(1.05)
+    filtered_atk.putalpha(230)
+
+    atk_glow = filtered_atk.filter(ImageFilter.GaussianBlur(6))
+    atk_glow = ImageEnhance.Brightness(atk_glow).enhance(1.6)
+
+    # 合成
+    final_image = Image.alpha_composite(final_image, atk_glow)
+    final_image = Image.alpha_composite(final_image, filtered_atk)
+
 
     # =============================
     # 🔠 カードIDを右下に寄せて描画
