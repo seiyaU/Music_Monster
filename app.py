@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "squid"
+        character_animal = "love-cat"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -242,6 +242,7 @@ def generate_image(user_id):
         creature_name = f"{influenced_word} {character_animal}"
     else:  
         creature_name = f"The {character_animal} of {influenced_word}"
+    creature_name = creature_name.title()
     print(f"名前: {creature_name}")
 
     # 3:4 比率にリサイズ（幅768, 高さ1024など）
@@ -390,7 +391,7 @@ def get_result(prediction_id):
         (255, 0, 0),     # 赤
         (255, 127, 70),   # オレンジ
         (255, 255, 70),   # 黄
-        (30, 255, 0),     # 緑
+        (100, 255, 70),     # 緑
         (0, 0, 255),     # 青
         (75, 0, 130),    # 藍
         (148, 0, 211)    # 紫
