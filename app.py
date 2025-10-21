@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "toy-dog"
+        character_animal = "parrot-fish"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -370,7 +370,7 @@ def get_result(prediction_id):
     card_id = f"#{prediction_id[:8].upper()}"
 
     try:
-        font_title = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 50)
+        font_title = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 50)
         font_info = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 10)
     except:
         font_title = ImageFont.load_default()
