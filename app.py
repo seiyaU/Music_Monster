@@ -94,7 +94,6 @@ def callback():
 def generate_image(user_id):
 
     # ✅ セッション検証（他人のデータを防ぐ）
-    print("generate_apiが動いた")
     current_user = session.get("user_id")
     print("セッションからユーザーを取得できた")
     if not current_user or current_user != user_id:
@@ -108,13 +107,17 @@ def generate_image(user_id):
         new_token = sp_oauth.refresh_access_token(refresh_token)
         session["access_token"] = new_token["access_token"]
         session["expires_at"] = new_token["expires_at"]
+    
+    print("トークン有効期限チェック完了")
 
 
     access_token = session.get("access_token")
     if not access_token:
         return jsonify({"error": "No valid access token"}), 401
 
+    print("Spotifyからデータ取得開始")
     sp = Spotify(auth=access_token)
+    print("Spotifyからデータ取得できた")
 
     # ===============================
     # 🟢 Spotify再生履歴のキャッシュ処理
