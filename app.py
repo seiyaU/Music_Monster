@@ -223,7 +223,7 @@ def generate_image(user_id):
         character_animal = "dragon"
 
     if user_id == "noel1109.marble1101":
-        character_animal = "shark"
+        character_animal = "pelican"
 
     base_image_path = f"animal_templates/{character_animal}.png"
     if not os.path.exists(base_image_path):
@@ -396,9 +396,38 @@ def get_result(prediction_id):
         (148, 0, 211)    # 紫
     ]
 
+    # アウトラインの太さ（調整可能）
+    outline_width = 4
+    outline_color = (255, 255, 255, 255)  # 白
+    shadow_offset = (6, 6)  # シャドウのずらし量
+    shadow_color = (0, 0, 0, 180)  # 半透明の黒い影
+
+    # 描画位置を最初に戻す
+    x_pos = (holo.width - tw) / 2
+    y_pos = 25
+
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
         color = gradient_colors[i % len(gradient_colors)]
+        # --- 外枠を先に描画 ---
+        # --- シャドウ ---
+        title_draw.text(
+            (x_pos + shadow_offset[0], y_pos + shadow_offset[1]),
+            char,
+            font=font_title,
+            fill=shadow_color
+        )
+
+        for dx in range(-outline_width, outline_width + 1):
+            for dy in range(-outline_width, outline_width + 1):
+                if dx**2 + dy**2 <= outline_width**2:  # 円形に近い外枠
+                    title_draw.text(
+                        (x_pos + dx, y_pos + dy),
+                        char,
+                        font=font_title,
+                        fill=outline_color
+                    )
+        # --- 本体の文字を描画 ---
         title_draw.text((x_pos, y_pos), char, font=font_title, fill=color + (255,))
         # 次の文字の横位置を取得
         char_width = title_draw.textbbox((0,0), char, font=font_title)[2] - title_draw.textbbox((0,0), char, font=font_title)[0]
