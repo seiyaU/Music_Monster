@@ -16,6 +16,31 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
+def add_glitter_effect(base_image, glitter_density=0.004):
+    """画像全体にグリッターを重ねる"""
+    width, height = base_image.size
+    glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(glitter_layer)
+
+    num_glitters = int(width * height * glitter_density)
+
+    for _ in range(num_glitters):
+        x = random.randint(0, width - 1)
+        y = random.randint(0, height - 1)
+        size = random.choice([1, 2, 3])
+        color = random.choice([
+            (255, 255, 255, random.randint(150, 220)),  # 白
+            (255, 215, 0, random.randint(130, 200)),    # 金
+            (173, 216, 230, random.randint(120, 180)),  # 水色
+            (255, 182, 193, random.randint(120, 180)),  # ピンク
+        ])
+        draw.ellipse((x, y, x + size, y + size), fill=color)
+
+    glitter_layer = glitter_layer.filter(ImageFilter.GaussianBlur(0.8))
+    combined = Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
+    return combined
+
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
@@ -270,7 +295,7 @@ def generate_image(user_id):
             character_animal = "dragon"
 
         if user_id == "noel1109.marble1101":
-            character_animal = "seal"
+            character_animal = "cat"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
@@ -315,6 +340,9 @@ def generate_image(user_id):
         }
 
         MODEL_VERSION = random.choice([
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
             "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
@@ -421,6 +449,9 @@ def get_result(prediction_id):
     holo = holo.filter(ImageFilter.SMOOTH_MORE)
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
+    # ✨ グリッター効果を全体に追加
+    holo = add_glitter_effect(holo, glitter_density=0.004)
+
 
     # =============================
     # 🏷️ タイトル・ユーザー名・カードID描画
@@ -448,7 +479,7 @@ def get_result(prediction_id):
     tw = title_bbox[2] - title_bbox[0]
     th = title_bbox[3] - title_bbox[1]
     x_pos = (width - tw) / 2
-    y_pos = 10
+    y_pos = 5
 
     # 🌈 虹色グラデーション文字描画
     gradient_colors = [
@@ -469,7 +500,7 @@ def get_result(prediction_id):
 
     # 描画位置を最初に戻す
     x_pos = (holo.width - tw) / 2
-    y_pos = 10
+    y_pos = 5
 
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
