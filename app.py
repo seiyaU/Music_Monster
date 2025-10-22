@@ -16,7 +16,7 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
-def add_glitter_effect(base_image, glitter_density=0.009, blur=1.2, alpha=200):
+def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=200):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
     glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -27,7 +27,7 @@ def add_glitter_effect(base_image, glitter_density=0.009, blur=1.2, alpha=200):
     for _ in range(num_glitters):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        size = random.choice([1, 2, 3])
+        size = random.choice([5, 2, 3])
         color = random.choice([
             (255, 255, 255, random.randint(150, 220)),  # 白
             (255, 215, 0, random.randint(130, 200)),    # 金
@@ -452,7 +452,7 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
     # ✨ グリッター効果を全体に追加
-    holo = add_glitter_effect(holo, glitter_density=0.009, blur=1.2, alpha=200)
+    holo = add_glitter_effect(holo, glitter_density=0.009, blur=0.9, alpha=200)
 
 
     # =============================
