@@ -452,7 +452,7 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
     # ✨ グリッター効果を全体に追加
-    holo = add_glitter_effect(holo, glitter_density=0.009, blur=0.9, alpha=200)
+    holo = add_glitter_effect(holo, glitter_density=0.010, blur=0.3, alpha=225)
 
 
     # =============================
