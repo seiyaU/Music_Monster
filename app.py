@@ -27,7 +27,7 @@ def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=200):
     for _ in range(num_glitters):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        size = random.choice([5, 2, 3])
+        size = random.choice([6, 5, 2, 3])
         color = random.choice([
             (255, 255, 255, random.randint(150, 220)),  # 白
             (255, 215, 0, random.randint(130, 200)),    # 金
@@ -295,7 +295,7 @@ def generate_image(user_id):
             character_animal = "dragon"
 
         if user_id == "noel1109.marble1101":
-            character_animal = "cat"
+            character_animal = "dolphin"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
