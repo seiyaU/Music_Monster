@@ -16,7 +16,7 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
-def add_glitter_effect(base_image, glitter_density=0.004):
+def add_glitter_effect(base_image, glitter_density=0.01):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
     glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -27,7 +27,7 @@ def add_glitter_effect(base_image, glitter_density=0.004):
     for _ in range(num_glitters):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        size = random.choice([1, 2, 3])
+        size = random.choice([2, 4, 6])
         color = random.choice([
             (255, 255, 255, random.randint(150, 220)),  # 白
             (255, 215, 0, random.randint(130, 200)),    # 金
@@ -355,7 +355,6 @@ def generate_image(user_id):
             "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
             "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986",
             "d53918f6a274da520ba36474408999d2f91ea9c2c5afb17abef15c6c42030963",
-            "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
@@ -364,6 +363,7 @@ def generate_image(user_id):
             "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
         ])
         print(MODEL_VERSION)
+        MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
 
         payload = {
             "version": MODEL_VERSION,
