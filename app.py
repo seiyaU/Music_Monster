@@ -448,7 +448,7 @@ def get_result(prediction_id):
     tw = title_bbox[2] - title_bbox[0]
     th = title_bbox[3] - title_bbox[1]
     x_pos = (width - tw) / 2
-    y_pos = 15
+    y_pos = 10
 
     # 🌈 虹色グラデーション文字描画
     gradient_colors = [
@@ -469,7 +469,7 @@ def get_result(prediction_id):
 
     # 描画位置を最初に戻す
     x_pos = (holo.width - tw) / 2
-    y_pos = 15
+    y_pos = 10
 
     # 各文字に色をつける
     for i, char in enumerate(ai_title):
