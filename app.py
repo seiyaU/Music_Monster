@@ -16,7 +16,7 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
-def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=200):
+def add_glitter_effect(base_image, glitter_density=0.008, blur=0.9, alpha=200):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
     glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -254,13 +254,13 @@ def generate_image(user_id):
         elif definition_score <= 7200:
             character_animal = "parrot-fish"
         elif definition_score <= 7400:
-            character_animal = "shark"
+            character_animal = "fish-market"
         elif definition_score <= 7600:
             character_animal = "frog"
         elif definition_score <= 7800:
             character_animal = "snake"
         elif definition_score <= 8000:
-            character_animal = "fish-market"
+            character_animal = "shark"
         elif definition_score <= 8200:
             character_animal = "horse"
         elif definition_score <= 8400:
@@ -294,8 +294,8 @@ def generate_image(user_id):
         else:
             character_animal = "dragon"
 
-        if user_id == "noel1109.marble1101":
-            character_animal = "dolphin"
+        #if user_id == "noel1109.marble1101":
+        #    character_animal = "dolphin"
 
         base_image_path = f"animal_templates/{character_animal}.png"
         if not os.path.exists(base_image_path):
@@ -329,7 +329,7 @@ def generate_image(user_id):
 
         prompt = (
             f"Legendary creature in {character_animal} of picture is a soldier or knight of alien has some weapons and from a dark and mysterious world."
-            f"It has some factor relevant to the phrase of {influenced_word}. Background image is {album_image_url} "
+            f"It has some factor relevant to the phrase of {influenced_word}. " #Background image is {album_image_url}
             f"It is also designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
         )
         print(prompt)
@@ -372,7 +372,8 @@ def generate_image(user_id):
             "input": {
                 "prompt": prompt,
                 "image": image_data_uri,
-                "strength": 0.9,
+                "strength": 0.8,
+                "image": album_image_url,
                 "num_outputs": 1,
                 "aspect_ratio": "3:4"
             }
@@ -452,8 +453,9 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
     # ✨ グリッター効果を全体に追加
-    holo = add_glitter_effect(holo, glitter_density=0.010, blur=0.3, alpha=225)
-
+    if random.random() < 0.1:
+        holo = add_glitter_effect(holo, glitter_density=0.008, blur=0.3, alpha=225)
+        print("✨ グリッターを付与しました！（10% 確率）")
 
     # =============================
     # 🏷️ タイトル・ユーザー名・カードID描画
