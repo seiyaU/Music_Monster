@@ -164,7 +164,7 @@ def generate_image(user_id):
             print("🟠 Spotify APIから再生履歴を取得")
             try:
                 recent = sp.current_user_recently_played(limit=50)
-                redis_client.setex(cache_key, 3600, json.dumps(recent))  # 1時間キャッシュ
+                redis_client.setex(cache_key, 1800, json.dumps(recent))  
             except Exception as e:
                 print("🚨 Spotify API error:", e)
                 return jsonify({"error": "Spotify data fetch failed"}), 500
@@ -173,7 +173,7 @@ def generate_image(user_id):
             return "No recent tracks found.", 404
         
         # ✅ Redis に保存（10分キャッシュ）
-        redis_client.setex(cache_key, 3600, json.dumps(recent))
+        redis_client.setex(cache_key, 1800, json.dumps(recent))
 
         # 🎨 ベースとなるテンプレート画像を選択
         definition_score = 0
@@ -235,13 +235,12 @@ def generate_image(user_id):
             for g in genres:
                 definition_score += genre_weights.get(g, 0)
                 influenced_word_box.append(g)
-                print(g)
-                print(genre_weights.get(g))
+                print(f"{g} - {genre_weights.get(g)}")
             if artist_info["name"] == "The Beatles":
                 definition_score += 30
 
         # 動物の確定
-        if definition_score <= 6000:
+        if definition_score <= 4000:
             character_animal = "bug"
         elif definition_score <= 6200:
             character_animal = "fish"
