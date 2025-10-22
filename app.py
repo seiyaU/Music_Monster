@@ -16,7 +16,7 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
-def add_glitter_effect(base_image, glitter_density=0.01):
+def add_glitter_effect(base_image, glitter_density=0.009, blur=1.2, alpha=200):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
     glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -27,7 +27,7 @@ def add_glitter_effect(base_image, glitter_density=0.01):
     for _ in range(num_glitters):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        size = random.choice([2, 4, 6])
+        size = random.choice([1, 2, 3])
         color = random.choice([
             (255, 255, 255, random.randint(150, 220)),  # 白
             (255, 215, 0, random.randint(130, 200)),    # 金
@@ -36,7 +36,7 @@ def add_glitter_effect(base_image, glitter_density=0.01):
         ])
         draw.ellipse((x, y, x + size, y + size), fill=color)
 
-    glitter_layer = glitter_layer.filter(ImageFilter.GaussianBlur(0.8))
+    glitter_layer = glitter_layer.filter(ImageFilter.GaussianBlur(blur))
     combined = Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
     return combined
 
@@ -360,10 +360,12 @@ def generate_image(user_id):
             "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
             "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
             "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
-            "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1"
+            "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1",
+            "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
+
         ])
         print(MODEL_VERSION)
-        MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
+        #MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
 
         payload = {
             "version": MODEL_VERSION,
@@ -450,7 +452,7 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
     # ✨ グリッター効果を全体に追加
-    holo = add_glitter_effect(holo, glitter_density=0.004)
+    holo = add_glitter_effect(holo, glitter_density=0.009, blur=1.2, alpha=200)
 
 
     # =============================
