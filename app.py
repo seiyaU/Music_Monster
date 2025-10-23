@@ -235,14 +235,14 @@ def generate_image(user_id):
             for g in genres:
                 definition_score += genre_weights.get(g, 0)
                 influenced_word_box.append(g)
-                print(f"{g} - {genre_weights.get(g)}")
+                print(f"{g}: {genre_weights.get(g)}")
             if artist_info["name"] == "The Beatles":
                 definition_score += 30
 
         # 動物の確定
-        if definition_score <= 4000:
+        if definition_score <= 2000:
             character_animal = "bug"
-        elif definition_score <= 6200:
+        elif definition_score <= 4000:
             character_animal = "fish"
         elif definition_score <= 6400:
             character_animal = "squid"
