@@ -243,6 +243,8 @@ def generate_image(user_id):
         if definition_score <= 2000:
             character_animal = "bug"
         elif definition_score <= 4000:
+            character_animal = "crocodile"
+        elif definition_score <= 5000:
             character_animal = "fish"
         elif definition_score <= 6400:
             character_animal = "squid"
