@@ -15,6 +15,7 @@ import json
 import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
+import secrets
 
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
@@ -39,6 +40,18 @@ def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     glitter_layer = glitter_layer.filter(ImageFilter.GaussianBlur(blur))
     combined = Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
     return combined
+
+def safe_title(text):
+    # アルファベットを含む単語のみタイトルケース化
+    words = text.split()
+    new_words = []
+    for w in words:
+        if re.search(r"[A-Za-z]", w):  # 英字を含む単語のみ
+            new_words.append(w.capitalize())
+        else:
+            new_words.append(w)
+    return " ".join(new_words)
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
@@ -89,8 +102,9 @@ def home():
 @app.route("/login")
 def login():
     # Spotify認証に影響しないキーだけ削除
-    for key in ["user_id", "access_token", "refresh_token", "expires_at"]:
-        session.pop(key, None)
+    # セッションIDを強制的に新しくする
+    session.modified = True
+    session['new_session_token'] = secrets.token_hex(8)
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
@@ -323,7 +337,7 @@ def generate_image(user_id):
             creature_name = f"{influenced_word} {character_animal}"
         else:  
             creature_name = f"The {character_animal} of {influenced_word}"
-        creature_name = creature_name.title()
+        creature_name = safe_title(creature_name)
         # ✅ 正規表現で不要部分を削除
         creature_name = re.sub(r"[\-\(\[].*?(Remaster|Live|Remix|Version).*?[\)\]]", "", creature_name, flags=re.IGNORECASE)
         creature_name = re.sub(r"\s{2,}", " ", creature_name).strip()  # 余分なスペースを削除
