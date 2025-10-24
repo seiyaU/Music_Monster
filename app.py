@@ -40,7 +40,6 @@ def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     combined = Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
     return combined
 
-
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
@@ -89,7 +88,7 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    session.clear()  # 🔥 前回のセッションを完全削除
+    # session.clear()  # 🔥 前回のセッションを完全削除
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
