@@ -15,7 +15,7 @@ import json
 import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
-import secrets
+import uuid
 
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
@@ -66,8 +66,9 @@ app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
 app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
-app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
+app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 Session(app)
 
@@ -101,10 +102,9 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    # Spotify認証に影響しないキーだけ削除
-    # セッションIDを強制的に新しくする
-    session.modified = True
-    session['new_session_token'] = secrets.token_hex(8)
+    # セッションを完全に再生成（Redis上でも新IDになる）
+    session.clear()
+    session["session_id"] = str(uuid.uuid4())
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
@@ -170,8 +170,10 @@ def generate_image(user_id):
         # ===============================
         # 🟢 Spotify再生履歴のキャッシュ処理
         # ===============================
-        cache_key = f"recently_played:{user_id}"
-        cached_data = redis_client.get(cache_key)
+        session_id = session.get("session_id")
+        cache_key = f"recently_played:{session_id}"
+        redis_client.setex(cache_key, 1800, json.dumps(recent))
+
 
         if cached_data:
             recent = json.loads(cached_data)
