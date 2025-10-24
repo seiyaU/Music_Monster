@@ -172,9 +172,8 @@ def generate_image(user_id):
         # ===============================
         session_id = session.get("session_id")
         cache_key = f"recently_played:{session_id}"
-        redis_client.setex(cache_key, 1800, json.dumps(recent))
 
-
+        cached_data = redis_client.get(cache_key)
         if cached_data:
             recent = json.loads(cached_data)
             print("🟢 Redisキャッシュから再生履歴を取得")
