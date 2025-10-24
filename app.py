@@ -245,7 +245,7 @@ def generate_image(user_id):
         elif definition_score <= 3000:
             character_animal = "grasshopper"
         elif definition_score <= 4000:
-            character_animal = "crocodile"
+            character_animal = "eel"
         elif definition_score <= 5000:
             character_animal = "fish"
         elif definition_score <= 6400:
@@ -264,8 +264,10 @@ def generate_image(user_id):
             character_animal = "snake"
         elif definition_score <= 8000:
             character_animal = "shark"
-        elif definition_score <= 8200:
+        elif definition_score <= 8100:
             character_animal = "horse"
+        elif definition_score <= 8200:
+            character_animal = "crocodile"
         elif definition_score <= 8400:
             character_animal = "giraffe"
         elif definition_score <= 8600:
@@ -376,7 +378,7 @@ def generate_image(user_id):
                 "prompt": prompt,
                 "image": album_image_url,
                 "image": image_data_uri,
-                "strength": 0.8,
+                "strength": 0.9,
                 "num_outputs": 1,
                 "aspect_ratio": "3:4"
             }
