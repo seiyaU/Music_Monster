@@ -83,6 +83,63 @@
     #start-btn:hover {
       background: #1ed760;
     }
+
+    .about-app {
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 20px 25px;
+    border-radius: 16px;
+    margin-top: 30px;
+    text-align: left;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+
+  .about-app h3 {
+    text-align: center;
+    color: #fff;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+  }
+
+  .about-app .quote {
+    font-style: italic;
+    color: #a0f0a0;
+    text-align: center;
+    margin: 15px 0;
+  }
+
+  .donate-link {
+    display: inline-block;
+    background: #ffdd57;
+    color: #222;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .donate-link:hover {
+    background: #ffe47a;
+  }
+
+  .dev-note {
+    margin-top: 40px;
+    max-width: 600px;
+    padding: 15px 20px;
+    background: rgba(255,255,255,0.05);
+    border-left: 4px solid #1DB954;
+    border-radius: 12px;
+    text-align: left;
+    font-size: 0.9rem;
+  }
+  .dev-note h4 {
+    color: #1ed760;
+    margin-bottom: 8px;
+  }
+
   </style>
 </head>
 <body>
@@ -91,19 +148,38 @@
     <h2>Generate Music Cat</h2>
     <p>Log in with Spotify to start generating your cat!</p>
     <button id="start-btn">Start with Spotify</button>
-    <d>
-      The goal of this app is providing original cards based on each user data. <br>
-      "Listen to good music to get good monster" This is the slogan.<br>
-      But, now it doesn't work as well. It belong to only my Spotify user history even you log in.<br>
-      So, now enjoy it as simple monster card generator. <br>
-      They have their own ID and we can never seen same picture ever.<br>
-      Let's enjoy collect, trade and battle.<br>
-      In the end, the generation is not free so if you like this app, Donate me. Buy me a Coffee.
-    </p>
-    <p>Hello Spotify Developer Team!<br>
-      I need to change Development mode under your permission. Please guide me.
-    </p>
-  </div>
+
+    <div class="about-app">
+      <h3>About This App</h3>
+      <p>
+        The goal of this app is to provide <strong>original monster cards</strong> based on each user's music data.
+      </p>
+      <p class="quote">
+        “Listen to good music to get good monsters.”
+      </p>
+      <p>
+        Currently, it only uses my own Spotify history, even if you log in — so please enjoy it as a simple
+        <strong>monster card generator</strong> for now.
+      </p>
+      <p>
+        Each card has a unique ID, and you’ll never see the same image twice.
+        <br>Collect them, trade them, and battle with your friends!
+      </p>
+      <p>
+        If you like this app, consider supporting it. Buy me a Coffee.
+        <a href="https://buymeacoffee.com/seiyau" target="_blank" class="donate-link">☕ Buy me a coffee</a>
+      </p>
+    </div>
+
+    <div class="dev-note">
+      <h4>Note to Spotify Developer Team</h4>
+      <p>
+        I need to switch from Development mode under your permission.  
+        Please guide me through the process.
+      </p>
+    </div>
+</div>
+
 
   <!-- ✅ 生成画面（非表示スタート） -->
   <div id="generation-screen" style="display:none; flex-direction:column; align-items:center;">
