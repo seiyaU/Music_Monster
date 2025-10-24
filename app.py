@@ -88,7 +88,9 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    # session.clear()  # 🔥 前回のセッションを完全削除
+    # Spotify認証に影響しないキーだけ削除
+    for key in ["user_id", "access_token", "refresh_token", "expires_at"]:
+        session.pop(key, None)
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
