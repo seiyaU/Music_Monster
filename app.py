@@ -237,7 +237,7 @@ def generate_image(user_id):
                 influenced_word_box.append(g)
                 print(f"{g}: {genre_weights.get(g)}")
             if artist_info["name"] == "The Beatles":
-                definition_score += 30
+                definition_score += 50
 
         # 動物の確定
         if definition_score <= 2000:
