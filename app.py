@@ -242,6 +242,8 @@ def generate_image(user_id):
         # 動物の確定
         if definition_score <= 2000:
             character_animal = "bug"
+        elif definition_score <= 3000:
+            character_animal = "grasshopper"
         elif definition_score <= 4000:
             character_animal = "crocodile"
         elif definition_score <= 5000:
