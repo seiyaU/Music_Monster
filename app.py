@@ -89,6 +89,7 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
+    session.clear()  # 🔥 前回のセッションを完全削除
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
