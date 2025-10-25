@@ -104,6 +104,7 @@ def home():
 def login():
     # セッションを完全に再生成（Redis上でも新IDになる）
     session.clear()
+    session.new = True  # ✅ 新しいセッションを強制生成
     session["session_id"] = str(uuid.uuid4())
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
@@ -170,8 +171,8 @@ def generate_image(user_id):
         # ===============================
         # 🟢 Spotify再生履歴のキャッシュ処理
         # ===============================
-        session_id = session.get("session_id")
-        cache_key = f"recently_played:{session_id}"
+        session_id = session.get("session_id", str(uuid.uuid4()))
+        cache_key = f"recently_played:{current_user}:{session_id}"
 
         cached_data = redis_client.get(cache_key)
         if cached_data:
