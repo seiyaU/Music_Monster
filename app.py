@@ -66,7 +66,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 redis_client = redis.from_url(os.getenv("REDIS_URL"))
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_REDIS"] = redis_client
-app.config["SESSION_KEY_PREFIX"] = "spotify_session:"  # ✅ ユーザー単位で独立
+app.config["SESSION_KEY_PREFIX"] = f"spotify_cardgen:{os.getenv('RENDER_INSTANCE_ID', 'local')}:"   # ✅ ユーザー単位で独立
 app.config["SESSION_COOKIE_NAME"] = "spotify_session"
 app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
@@ -109,13 +109,10 @@ def get_spotify_oauth():
 
 
 
+# ✅ Cookieをホストごとに独立させる
 @app.before_request
-def debug_headers():
-    print("---- Incoming Headers ----")
-    for k, v in request.headers.items():
-        if k.startswith("X-Forwarded"):
-            print(f"{k}: {v}")
-    print("--------------------------")
+def fix_cookie_domain():
+    app.config["SESSION_COOKIE_DOMAIN"] = request.host.split(":")[0]
 
 
 @app.after_request
@@ -134,9 +131,10 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    # セッションを完全に再生成（Redis上でも新IDになる）
+    old_session_id = session.get("session_id")
+    if old_session_id:
+        redis_client.delete(f"spotify_cardgen:{old_session_id}")
     session.clear()
-    session.new = True  # ✅ 新しいセッションを強制生成
     session["session_id"] = str(uuid.uuid4())
     sp_oauth = get_spotify_oauth()
     return redirect(sp_oauth.get_authorize_url())
@@ -298,49 +296,49 @@ def generate_image(user_id):
             character_animal = "eel"
         elif definition_score <= 5000:
             character_animal = "fish"
-        elif definition_score <= 5100:
-            character_animal = "squid"
         elif definition_score <= 5200:
-            character_animal = "crab"    
-        elif definition_score <= 5300:
-            character_animal = "lobster"
+            character_animal = "squid"
         elif definition_score <= 5400:
-            character_animal = "octopus"
-        elif definition_score <= 5500:
-            character_animal = "parrot-fish"
+            character_animal = "crab"    
         elif definition_score <= 5600:
-            character_animal = "fish-market"
-        elif definition_score <= 5700:
-            character_animal = "frog"
+            character_animal = "lobster"
         elif definition_score <= 5800:
-            character_animal = "snake"
-        elif definition_score <= 5900:
-            character_animal = "shark"
+            character_animal = "octopus"
         elif definition_score <= 6000:
-            character_animal = "horse"
-        elif definition_score <= 6100:
-            character_animal = "crocodile"
+            character_animal = "parrot-fish"
         elif definition_score <= 6200:
-            character_animal = "giraffe"
-        elif definition_score <= 6300:
-            character_animal = "sloth"
+            character_animal = "fish-market"
         elif definition_score <= 6400:
-            character_animal = "orangutan"
-        elif definition_score <= 6700:
-            character_animal = "seal"
+            character_animal = "frog"
+        elif definition_score <= 6600:
+            character_animal = "snake"
         elif definition_score <= 6800:
-            character_animal = "dolphin"
-        elif definition_score <= 6900:
-            character_animal = "dog"
+            character_animal = "shark"
         elif definition_score <= 7000:
+            character_animal = "horse"
+        elif definition_score <= 7200:
+            character_animal = "crocodile"
+        elif definition_score <= 7400:
+            character_animal = "giraffe"
+        elif definition_score <= 7600:
+            character_animal = "sloth"
+        elif definition_score <= 7800:
+            character_animal = "orangutan"
+        elif definition_score <= 8000:
+            character_animal = "seal"
+        elif definition_score <= 8200:
+            character_animal = "dolphin"
+        elif definition_score <= 8400:
+            character_animal = "dog"
+        elif definition_score <= 8600:
             character_animal = "penguin"
-        elif definition_score <= 9700:
+        elif definition_score <= 8800:
             character_animal = "lion"
-        elif definition_score <= 9800:
+        elif definition_score <= 9000:
             character_animal = "pelican"
-        elif definition_score <= 9900:
+        elif definition_score <= 9500:
             character_animal = "T-rex"
-        elif definition_score <= 10500:
+        elif definition_score <= 10000:
             character_animal = "parrot"
         elif definition_score <= 11000:
             character_animal = "cat"
