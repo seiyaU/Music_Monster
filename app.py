@@ -18,6 +18,7 @@ import re
 import uuid
 
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import after_this_request
 
 
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
@@ -71,11 +72,12 @@ app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
 app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SAMESITE"] = 'None'
 app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 
 Session(app)
 
@@ -116,7 +118,11 @@ def debug_headers():
     print("--------------------------")
 
 
-
+@app.after_request
+def add_header(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 

@@ -7,6 +7,16 @@ const STATIC_ASSETS = [
   '/static/favicon.ico'
 ];
 
+const doNotCache = ['/login', '/callback', '/generate', '/session-check'];
+
+self.addEventListener('fetch', event => {
+  if (doNotCache.some(url => event.request.url.includes(url))) {
+    return; // 通常 fetch（キャッシュしない）
+  }
+  // 通常キャッシュ処理
+});
+
+
 // ==============================
 // 🔹 インストール
 // ==============================
