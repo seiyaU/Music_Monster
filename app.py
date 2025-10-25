@@ -17,6 +17,9 @@ from decimal import Decimal
 import re
 import uuid
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
@@ -53,6 +56,8 @@ def safe_title(text):
     return " ".join(new_words)
 
 
+
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
@@ -61,7 +66,7 @@ redis_client = redis.from_url(os.getenv("REDIS_URL"))
 app.config["SESSION_TYPE"] = "redis"
 app.config["SESSION_REDIS"] = redis_client
 app.config["SESSION_KEY_PREFIX"] = "spotify_session:"  # ✅ ユーザー単位で独立
-app.config["SESSION_COOKIE_NAME"] = "spotify_session_" + os.urandom(8).hex()
+app.config["SESSION_COOKIE_NAME"] = "spotify_session"
 app.config["SESSION_PERMANENT"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
 app.config["SESSION_USE_SIGNER"] = True
@@ -69,6 +74,8 @@ app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 Session(app)
 
@@ -94,6 +101,25 @@ def get_spotify_oauth():
         redirect_uri=REDIRECT_URI,
         scope="user-read-recently-played user-read-email"
     )
+
+
+
+
+
+
+@app.before_request
+def debug_headers():
+    print("---- Incoming Headers ----")
+    for k, v in request.headers.items():
+        if k.startswith("X-Forwarded"):
+            print(f"{k}: {v}")
+    print("--------------------------")
+
+
+
+
+
+
 
 @app.route("/")
 def home():
