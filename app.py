@@ -98,13 +98,13 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 def get_spotify_oauth(user_id=None):
     cache_path = None
     if user_id:
-        cache_path = f".cache-{user_id}"  # ユーザー別キャッシュ
+        cache_path = f".cache-{user_id}"  # 任意。個別キャッシュを使いたい場合
     return SpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
         scope="user-read-recently-played user-read-email",
-        cache_path=cache_path
+        cache_path=None  # ✅ 全ユーザー共通キャッシュを無効化（安全）
     )
 
 
@@ -151,7 +151,7 @@ def callback():
 
 
 
-    
+
     token_info = sp_oauth.get_access_token(code, as_dict=True)
     access_token = token_info.get("access_token")
     if not access_token:
