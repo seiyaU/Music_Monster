@@ -65,7 +65,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
 # Redis + Flask-Session 設定
 redis_client = redis.from_url(os.getenv("REDIS_URL"))
-app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_REDIS"] = redis_client
 app.config["SESSION_KEY_PREFIX"] = f"spotify_cardgen:{os.getenv('RENDER_INSTANCE_ID', 'local')}:"   # ✅ ユーザー単位で独立
 app.config["SESSION_COOKIE_NAME"] = "spotify_session"
@@ -76,6 +76,7 @@ app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防
 app.config["SESSION_COOKIE_SAMESITE"] = 'None'
 app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_FILE_DIR"] = "/tmp/flask_session"
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
@@ -105,8 +106,9 @@ def get_spotify_oauth(user_id=None):
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played user-read-email",
-        cache_path=None  # ✅ グローバルキャッシュを使わない
+        scope="user-read-recently-played",
+        cache_path=None,
+        cache_handler=None
     )
 
 
@@ -148,35 +150,15 @@ def login():
 
 @app.route("/callback")
 def callback():
-    sp_oauth = get_spotify_oauth()
     code = request.args.get("code")
-
-    if not code:
-        return jsonify({"error": "Missing Spotify authorization code"}), 400
-
-    try:
-        token_info = sp_oauth.get_access_token(code, as_dict=True)
-    except Exception as e:
-        print("🚨 Spotify OAuth error:", e)
-        return jsonify({"error": "Spotify OAuth failed"}), 500
-
-    # 2. トークン情報をセッションに保存
+    token_info = get_spotify_oauth().get_access_token(code)
     session["access_token"] = token_info["access_token"]
-    session["refresh_token"] = token_info.get("refresh_token")
-    session["token_expires"] = token_info.get("expires_at")
 
-    # 3. Spotifyユーザー情報を取得
     sp = spotipy.Spotify(auth=session["access_token"])
-    user_info = sp.current_user()
-    spotify_user_id = user_info["id"]
+    user_id = sp.current_user()["id"]
+    session["user_id"] = user_id
 
-    # 4. FlaskセッションにユーザーIDを保持
-    session["user_id"] = spotify_user_id
-
-    print(f"🎵 Spotify user authenticated: {spotify_user_id}")
-
-    # 5. 認証後はアプリトップへ戻す
-    return redirect(f"/generate/{spotify_user_id}")
+    return redirect(f"/generate/{user_id}")
 
 
 
@@ -475,7 +457,14 @@ def generate_image(user_id):
     
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
-    return render_template("generate.html", user_id=user_id)
+    token = session.get("access_token")
+    if not token:
+        return redirect("/login")
+
+    sp = spotipy.Spotify(auth=token)
+
+
+
 
 # =====================
 # 生成結果ポーリング
