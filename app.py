@@ -176,7 +176,7 @@ def callback():
     print(f"🎵 Spotify user authenticated: {spotify_user_id}")
 
     # 5. 認証後はアプリトップへ戻す
-    return redirect(url_for("index"))
+    return redirect(f"/generate/{spotify_user_id}")
 
 
 
