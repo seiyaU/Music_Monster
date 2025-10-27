@@ -2,9 +2,10 @@ import base64
 import os
 import random
 import requests
-from flask import Flask, request, redirect, jsonify, send_from_directory, render_template, session
+from flask import Flask, request, redirect, jsonify, send_from_directory, render_template, session, url_for
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
+import spotipy
 from flask_session import Session
 import redis
 import time
@@ -96,16 +97,18 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 # SpotifyOAuth を動的生成（重要）
 def get_spotify_oauth(user_id=None):
-    cache_path = None
-    if user_id:
-        cache_path = f".cache-{user_id}"  # 任意。個別キャッシュを使いたい場合
+    """
+    各ユーザーに独立したSpotifyOAuthインスタンスを返す。
+    cache_path=Noneにすることで、Spotipyのグローバルキャッシュ(.cache)を無効化。
+    """
     return SpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
         scope="user-read-recently-played user-read-email",
-        cache_path=None  # ✅ 全ユーザー共通キャッシュを無効化（安全）
+        cache_path=None  # ✅ グローバルキャッシュを使わない
     )
+
 
 
 
@@ -145,31 +148,37 @@ def login():
 
 @app.route("/callback")
 def callback():
-    code = request.args.get("code")
     sp_oauth = get_spotify_oauth()
+    code = request.args.get("code")
 
+    if not code:
+        return jsonify({"error": "Missing Spotify authorization code"}), 400
 
+    try:
+        token_info = sp_oauth.get_access_token(code, as_dict=True)
+    except Exception as e:
+        print("🚨 Spotify OAuth error:", e)
+        return jsonify({"error": "Spotify OAuth failed"}), 500
 
-
-
-    token_info = sp_oauth.get_access_token(code, as_dict=True)
-    access_token = token_info.get("access_token")
-    if not access_token:
-        return f"Failed to obtain access token: {token_info}", 400
-
-    # ✅ Spotify API でユーザー情報取得
-    sp = Spotify(auth=access_token)
-    user = sp.me()
-    user_id = user["id"]
-
-    # ✅ Redis-backed session に保存
-    session["user_id"] = user_id
-    session["access_token"] = access_token
+    # 2. トークン情報をセッションに保存
+    session["access_token"] = token_info["access_token"]
     session["refresh_token"] = token_info.get("refresh_token")
-    session["expires_at"] = token_info.get("expires_at")
+    session["token_expires"] = token_info.get("expires_at")
 
-    print(f"✅ 認証成功: {user_id}")
-    return redirect(f"/generate/{user_id}")
+    # 3. Spotifyユーザー情報を取得
+    sp = spotipy.Spotify(auth=session["access_token"])
+    user_info = sp.current_user()
+    spotify_user_id = user_info["id"]
+
+    # 4. FlaskセッションにユーザーIDを保持
+    session["user_id"] = spotify_user_id
+
+    print(f"🎵 Spotify user authenticated: {spotify_user_id}")
+
+    # 5. 認証後はアプリトップへ戻す
+    return redirect(url_for("index"))
+
+
 
 # =====================
 # セッション確認API（フロントの「Start with Spotify」用）
