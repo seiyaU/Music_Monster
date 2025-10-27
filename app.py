@@ -462,8 +462,14 @@ def generate_page(user_id):
         return redirect("/login")
 
     sp = spotipy.Spotify(auth=token)
+    try:
+        recent_tracks = sp.current_user_recently_played(limit=10)
+    except Exception as e:
+        print("Spotify API Error:", e)
+        return "Spotify access error", 500
 
-    return render_template("generate.html", user_id=user_id)
+    # HTMLを返す
+    return render_template("generate.html", user_id=user_id, tracks=recent_tracks)
 
 
 
