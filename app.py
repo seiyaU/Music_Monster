@@ -106,7 +106,7 @@ def get_spotify_oauth(user_id=None):
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played",
+        scope="user-read-recently-played, user-read-email",
         cache_path=None,
         cache_handler=None
     )
@@ -153,6 +153,7 @@ def callback():
     code = request.args.get("code")
     token_info = get_spotify_oauth().get_access_token(code)
     session["access_token"] = token_info["access_token"]
+    session["refresh_token"] = token_info["refresh_token"]
 
     sp = spotipy.Spotify(auth=session["access_token"])
     user_id = sp.current_user()["id"]
