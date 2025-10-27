@@ -463,6 +463,8 @@ def generate_page(user_id):
 
     sp = spotipy.Spotify(auth=token)
 
+    return render_template("generate.html", user_id=user_id)
+
 
 
 
