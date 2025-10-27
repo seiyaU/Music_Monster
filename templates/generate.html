@@ -302,16 +302,8 @@
     // ===============================
     // ✅ Service Worker の登録処理
     // ===============================
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        try {
-          const reg = await navigator.serviceWorker.register('/serviceWorker.js');
-          console.log('🟢 Service Worker registered:', reg.scope);
-        } catch (err) {
-          console.warn('⚠️ Service Worker registration failed:', err);
-        }
-      });
-    } 
+    
+    
   </script>
 </body>
 </html>
