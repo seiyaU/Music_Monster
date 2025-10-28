@@ -17,6 +17,7 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 import uuid
+import shutil
 
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import after_this_request
@@ -59,7 +60,9 @@ def safe_title(text):
 
 
 
-
+if os.path.exists("/tmp/flask_session"):
+    shutil.rmtree("/tmp/flask_session")
+os.makedirs("/tmp/flask_session", exist_ok=True)
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
 
