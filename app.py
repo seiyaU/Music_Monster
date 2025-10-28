@@ -59,39 +59,12 @@ def safe_title(text):
     return " ".join(new_words)
 
 
-
-if os.path.exists("/tmp/flask_session"):
-    shutil.rmtree("/tmp/flask_session")
-os.makedirs("/tmp/flask_session", exist_ok=True)
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
-
-# Redis + Flask-Session 設定
-redis_client = redis.from_url(os.getenv("REDIS_URL"))
-app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_REDIS"] = redis_client
-app.config["SESSION_KEY_PREFIX"] = f"spotify_cardgen:{os.getenv('RENDER_INSTANCE_ID', 'local')}:"   # ✅ ユーザー単位で独立
 app.config["SESSION_COOKIE_NAME"] = "spotify_session"
-app.config["SESSION_PERMANENT"] = True
-app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
-app.config["SESSION_USE_SIGNER"] = True
-app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
-app.config["SESSION_COOKIE_SAMESITE"] = 'None'
-app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_FILE_DIR"] = "/tmp/flask_session"
-
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+redis_client = redis.from_url(os.getenv("REDIS_URL"))
 
 
-Session(app)
-
-try:
-    with open("data/genre_weights.yaml", "r", encoding="utf-8") as f:
-        genre_weights = yaml.safe_load(f)
-except Exception as e:
-    genre_weights = {}
-    print("⚠️ genre_weights.yaml の読み込みに失敗:", e)
 
 # ✅ Render環境変数から取得
 CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
@@ -100,38 +73,18 @@ REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 # SpotifyOAuth を動的生成（重要）
-def get_spotify_oauth(user_id=None):
-    """
-    各ユーザーに独立したSpotifyOAuthインスタンスを返す。
-    cache_path=Noneにすることで、Spotipyのグローバルキャッシュ(.cache)を無効化。
-    """
+def get_spotify_oauth():
     return SpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played, user-read-email",
-        cache_path=None,
-        cache_handler=None
+        scope="user-read-recently-played, user-read-email"
     )
 
 
 
 
 
-
-
-
-# ✅ Cookieをホストごとに独立させる
-@app.before_request
-def fix_cookie_domain():
-    app.config["SESSION_COOKIE_DOMAIN"] = request.host.split(":")[0]
-
-
-@app.after_request
-def add_header(response):
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    return response
 
 
 
@@ -143,38 +96,52 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
+    # 🔥 既存セッション削除
     old_session_id = session.get("session_id")
     if old_session_id:
         redis_client.delete(f"spotify_cardgen:{old_session_id}")
+
+    # Flaskセッション完全初期化
     session.clear()
+
+    # Cookie削除（ブラウザキャッシュ回避）
+    @after_this_request
+    def clear_cookie(response):
+        response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=request.host.split(":")[0])
+        return response
+
+    # 新しいセッション発行
     session["session_id"] = str(uuid.uuid4())
+
+    # Spotify認証URL発行
     sp_oauth = get_spotify_oauth()
-    return redirect(sp_oauth.get_authorize_url())
+    auth_url = sp_oauth.get_authorize_url()
+    print(f"🔐 Spotifyログインへ: {auth_url}")
+    return redirect(auth_url)
+
+
 
 @app.route("/callback")
 def callback():
+    sp_oauth = get_spotify_oauth()
     code = request.args.get("code")
-    token_info = get_spotify_oauth().get_access_token(code)
+
+    if not code:
+        return jsonify({"error": "Spotify authorization failed"}), 400
+
+    token_info = sp_oauth.get_access_token(code)
     session["access_token"] = token_info["access_token"]
-    session["refresh_token"] = token_info["refresh_token"]
+    session["expires_at"] = token_info["expires_at"]
+    session["session_id"] = str(uuid.uuid4())
 
     sp = spotipy.Spotify(auth=session["access_token"])
-    user_id = sp.current_user()["id"]
-    session["user_id"] = user_id
+    user = sp.current_user()
+    username = user["id"]
 
-    return redirect(f"/generate/{user_id}")
+    print(f"🎵 Spotify user authenticated: {username}")
+    return redirect(f"/generate/{username}")
 
 
-
-# =====================
-# セッション確認API（フロントの「Start with Spotify」用）
-# =====================
-@app.route("/session-check")
-def session_check():
-    user_id = session.get("user_id")
-    if user_id:
-        return jsonify({"logged_in": True, "user_id": user_id})
-    return jsonify({"logged_in": False})
 
 # AI画像生成エンドポイント
 @app.route("/generate_api/<user_id>", methods=["GET"])
@@ -461,20 +428,10 @@ def generate_image(user_id):
     
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
-    token = session.get("access_token")
-    if not token:
-        return redirect("/login")
-
-    sp = spotipy.Spotify(auth=token)
-    try:
-        recent_tracks = sp.current_user_recently_played(limit=10)
-    except Exception as e:
-        print("Spotify API Error:", e)
-        return "Spotify access error", 500
-
-    # HTMLを返す
-    return render_template("generate.html", user_id=user_id, tracks=recent_tracks)
-
+    # 🚫 トークンがあっても毎回ログインを強制
+    print(f"🚫 {user_id} のセッションを破棄し、再ログインを要求")
+    session.clear()
+    return redirect("/login")
 
 
 
@@ -720,14 +677,22 @@ def service_worker():
 def serve_static(filename):
     return send_from_directory("static", filename)
 
-# =====================
-# Render用 Health Check
-# =====================
-@app.route("/health")
-def health_check():
-    return jsonify({"status": "ok"}), 200
 
 
+# ==============================
+# 🔹 セッションチェックAPI
+# ==============================
+@app.route("/session-check")
+def session_check():
+    # 🚫 常に未ログイン状態を返す
+    return jsonify({"logged_in": False})
+
+# ==============================
+# 🔹 faviconエラー防止
+# ==============================
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
 
 # =====================
 # サーバー起動
