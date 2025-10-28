@@ -2,10 +2,9 @@ import base64
 import os
 import random
 import requests
-from flask import Flask, request, redirect, jsonify, send_from_directory, render_template, session, url_for
+from flask import Flask, request, redirect, jsonify, send_from_directory, render_template, session
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
-import spotipy
 from flask_session import Session
 import redis
 import time
@@ -16,12 +15,6 @@ import json
 import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
-import uuid
-import shutil
-
-from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import after_this_request
-
 
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
@@ -47,24 +40,31 @@ def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     combined = Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
     return combined
 
-def safe_title(text):
-    # アルファベットを含む単語のみタイトルケース化
-    words = text.split()
-    new_words = []
-    for w in words:
-        if re.search(r"[A-Za-z]", w):  # 英字を含む単語のみ
-            new_words.append(w.capitalize())
-        else:
-            new_words.append(w)
-    return " ".join(new_words)
-
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev_secret_key")
-app.config["SESSION_COOKIE_NAME"] = "spotify_session"
+
+# Redis + Flask-Session 設定
 redis_client = redis.from_url(os.getenv("REDIS_URL"))
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_REDIS"] = redis_client
+app.config["SESSION_KEY_PREFIX"] = "spotify_session:"  # ✅ ユーザー単位で独立
+app.config["SESSION_COOKIE_NAME"] = "spotify_session_" + os.urandom(8).hex()
+app.config["SESSION_PERMANENT"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = 60 * 60 * 24 * 7 
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_DOMAIN"] = None  # ✅ サブドメイン間共有防止（Safari対策）
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = True  # ✅ HTTPS環境で安全に送信
 
+Session(app)
 
+try:
+    with open("data/genre_weights.yaml", "r", encoding="utf-8") as f:
+        genre_weights = yaml.safe_load(f)
+except Exception as e:
+    genre_weights = {}
+    print("⚠️ genre_weights.yaml の読み込みに失敗:", e)
 
 # ✅ Render環境変数から取得
 CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
@@ -74,20 +74,13 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 # SpotifyOAuth を動的生成（重要）
 def get_spotify_oauth():
+    """ユーザーごとに独立したSpotifyOAuthインスタンスを生成"""
     return SpotifyOAuth(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played, user-read-email"
+        scope="user-read-recently-played user-read-email"
     )
-
-
-
-
-
-
-
-
 
 @app.route("/")
 def home():
@@ -96,323 +89,327 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    # 🔥 既存セッション削除
-    old_session_id = session.get("session_id")
-    if old_session_id:
-        redis_client.delete(f"spotify_cardgen:{old_session_id}")
-
-    # Flaskセッション完全初期化
-    session.clear()
-
-    # Cookie削除（ブラウザキャッシュ回避）
-    @after_this_request
-    def clear_cookie(response):
-        response.delete_cookie(app.config["SESSION_COOKIE_NAME"], domain=request.host.split(":")[0])
-        return response
-
-    # 新しいセッション発行
-    session["session_id"] = str(uuid.uuid4())
-
-    # Spotify認証URL発行
     sp_oauth = get_spotify_oauth()
-    auth_url = sp_oauth.get_authorize_url()
-    print(f"🔐 Spotifyログインへ: {auth_url}")
-    return redirect(auth_url)
-
-
+    return redirect(sp_oauth.get_authorize_url())
 
 @app.route("/callback")
 def callback():
-    sp_oauth = get_spotify_oauth()
     code = request.args.get("code")
+    sp_oauth = get_spotify_oauth()
+    token_info = sp_oauth.get_access_token(code, as_dict=True)
+    access_token = token_info.get("access_token")
+    if not access_token:
+        return f"Failed to obtain access token: {token_info}", 400
 
-    if not code:
-        return jsonify({"error": "Spotify authorization failed"}), 400
+    # ✅ Spotify API でユーザー情報取得
+    sp = Spotify(auth=access_token)
+    user = sp.me()
+    user_id = user["id"]
 
-    token_info = sp_oauth.get_access_token(code)
-    session["access_token"] = token_info["access_token"]
-    session["expires_at"] = token_info["expires_at"]
-    session["session_id"] = str(uuid.uuid4())
+    # ✅ Redis-backed session に保存
+    session["user_id"] = user_id
+    session["access_token"] = access_token
+    session["refresh_token"] = token_info.get("refresh_token")
+    session["expires_at"] = token_info.get("expires_at")
 
-    sp = spotipy.Spotify(auth=session["access_token"])
-    user = sp.current_user()
-    username = user["id"]
+    print(f"✅ 認証成功: {user_id}")
+    return redirect(f"/generate/{user_id}")
 
-    print(f"🎵 Spotify user authenticated: {username}")
-    return redirect(f"/generate/{username}")
-
-
-
-
-
+# =====================
+# セッション確認API（フロントの「Start with Spotify」用）
+# =====================
+@app.route("/session-check")
+def session_check():
+    user_id = session.get("user_id")
+    if user_id:
+        return jsonify({"logged_in": True, "user_id": user_id})
+    return jsonify({"logged_in": False})
 
 # AI画像生成エンドポイント
-@app.route("/generate_api/<user_id>")
+@app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
-    token = session.get("access_token")
-
-    if not token:
-        print("⚠️ generate_api: トークンなし → 再ログイン")
-        return jsonify({"status": "login_required"}), 401
-
     try:
-        sp = spotipy.Spotify(auth=token)
-        me = sp.current_user()
-        print(f"🎵 画像生成中: {me['id']}")
-    except Exception as e:
-        print(f"🚨 generate_api エラー: {e}")
-        return jsonify({"status": "login_required"}), 401
+        # ✅ セッション検証（他人のデータを防ぐ）
+        current_user = session.get("user_id")
+        print("セッションからユーザーを取得できた")
+        if not current_user or current_user != user_id:
+            print("❌ セッション不一致: 他ユーザーアクセス検出")
+            return jsonify({"status": "login_required"}), 401
+        
+        # トークン有効期限チェック
+        if time.time() > session.get("expires_at", 0):
+            sp_oauth = get_spotify_oauth()
+            refresh_token = session.get("refresh_token")
+            new_token = sp_oauth.refresh_access_token(refresh_token)
+            session["access_token"] = new_token["access_token"]
+            session["expires_at"] = new_token["expires_at"]
+        
+        access_token = session.get("access_token")
+        if not access_token:
+            return jsonify({"error": "No valid access token"}), 401
 
-    # 🔹 ここで画像生成処理を行う（略）
-    # ...
+        sp = Spotify(auth=access_token)
+        print("Spotifyからデータ取得できた")
 
-    
-
-    # 🎨 ベースとなるテンプレート画像を選択
-    definition_score = 0
-    influenced_word_box = []
-    album_image_url_box = []
-    creature_name = ""
-    artist_ids = []
-    artist_info_box = []
-
-    
-    print("\n🎵 最近再生した曲:")
-    # 🎵 アーティストIDを抽出（重複除去）
-    for item in recent["items"]:
-        artist = item["track"]["artists"][0]
-        artist_ids.append(artist["id"])
-        track = item["track"]
-        genre = artist.get("genres", [])
-
-        album_image_url_box.append(track['album']['images'][0]['url'])
-        influenced_word_box.append(track['name'])
-        influenced_word_box.append(artist['name'])
-
-        artist_ids = list(artist_ids)
-
-        print(f"{track['name']} / {artist['name']} ({', '.join(genre)})")
         # ===============================
-        # 🧠 アーティスト情報を一括取得＋キャッシュ
+        # 🟢 Spotify再生履歴のキャッシュ処理
         # ===============================
-        artist_info_box = []
-        uncached_ids = []
-        for aid in artist_ids:
-            cached_artist = redis_client.get(f"artist_info:{aid}")
-            if cached_artist:
-                artist_info_box.append(json.loads(cached_artist))
-            else:
-                uncached_ids.append(aid)
+        cache_key = f"recently_played:{user_id}"
+        cached_data = redis_client.get(cache_key)
 
-        if uncached_ids:
-            print(f"🕐 Spotify APIに問い合わせ（未キャッシュ）: {len(uncached_ids)}件")
-            # 一括で取得（最大50件）
-            try:
-                batch_info = sp.artists(uncached_ids)["artists"]
-                for info in batch_info:
-                    redis_client.setex(f"artist_info:{info['id']}", 86400, json.dumps(info))  # 24hキャッシュ
-                artist_info_box.extend(batch_info)
-            except Exception as e:
-                print("🚨 Spotify artist API batch error:", e)
-                time.sleep(0.1)  # rate-limit保護
+        if cached_data:
+            recent = json.loads(cached_data)
+            print("🟢 Redisキャッシュから再生履歴を取得")
         else:
-            print("✅ 全てキャッシュから取得")
+            print("🟠 Spotify APIから再生履歴を取得")
+            try:
+                recent = sp.current_user_recently_played(limit=50)
+                redis_client.setex(cache_key, 1800, json.dumps(recent))  
+            except Exception as e:
+                print("🚨 Spotify API error:", e)
+                return jsonify({"error": "Spotify data fetch failed"}), 500
 
-        print(f"🎨 アーティスト情報を{len(artist_info_box)}件読み込み完了")
+        if not recent.get("items"):
+            return "No recent tracks found.", 404
+        
+        # ✅ Redis に保存（10分キャッシュ）
+        redis_client.setex(cache_key, 1800, json.dumps(recent))
 
-    # ===============================
-    # 🧮 定義スコア計算
-    # ===============================
-    for artist_info in artist_info_box:
-        genres = artist_info.get("genres", [])
-        for g in genres:
-            definition_score += genre_weights.get(g, 0)
-            influenced_word_box.append(g)
-            print(f"{g}: {genre_weights.get(g)}")
-        if artist_info["name"] == "The Beatles":
-            definition_score += 50
-
-    # 動物の確定
-    if definition_score <= 2000:
-        character_animal = "bug"
-    elif definition_score <= 3000:
-        character_animal = "grasshopper"
-    elif definition_score <= 4000:
-        character_animal = "eel"
-    elif definition_score <= 5000:
-        character_animal = "fish"
-    elif definition_score <= 5200:
-        character_animal = "squid"
-    elif definition_score <= 5400:
-        character_animal = "crab"    
-    elif definition_score <= 5600:
-        character_animal = "lobster"
-    elif definition_score <= 5800:
-        character_animal = "octopus"
-    elif definition_score <= 6000:
-        character_animal = "parrot-fish"
-    elif definition_score <= 6200:
-        character_animal = "fish-market"
-    elif definition_score <= 6400:
-        character_animal = "frog"
-    elif definition_score <= 6600:
-        character_animal = "snake"
-    elif definition_score <= 6800:
-        character_animal = "shark"
-    elif definition_score <= 7000:
-        character_animal = "horse"
-    elif definition_score <= 7200:
-        character_animal = "crocodile"
-    elif definition_score <= 7400:
-        character_animal = "giraffe"
-    elif definition_score <= 7600:
-        character_animal = "sloth"
-    elif definition_score <= 7800:
-        character_animal = "orangutan"
-    elif definition_score <= 8000:
-        character_animal = "seal"
-    elif definition_score <= 8200:
-        character_animal = "dolphin"
-    elif definition_score <= 8400:
-        character_animal = "dog"
-    elif definition_score <= 8600:
-        character_animal = "penguin"
-    elif definition_score <= 8800:
-        character_animal = "lion"
-    elif definition_score <= 9000:
-        character_animal = "pelican"
-    elif definition_score <= 9500:
-        character_animal = "T-rex"
-    elif definition_score <= 10000:
-        character_animal = "parrot"
-    elif definition_score <= 11000:
-        character_animal = "cat"
-    elif definition_score <= 11500:
-        character_animal = "toy-dog"
-    elif definition_score <= 12000:
-        character_animal = "love-cat"
-    else:
-        character_animal = "dragon"
-
-    #if user_id == "noel1109.marble1101":
-    #    character_animal = "dolphin"
-
-    base_image_path = f"animal_templates/{character_animal}.png"
-    if not os.path.exists(base_image_path):
-        return f"Template not found: {base_image_path}", 404
-    
-    influenced_word = random.choice(influenced_word_box)
-    album_image_url = random.choice(album_image_url_box)
-
-    print(f"\n🏆 あなたの音楽スコア: {definition_score}")
-    print(f"動物: {character_animal}")
-    print(f"キーワード: {influenced_word}")
-    print(f"アルバム画像: {album_image_url}")
-    atk = int(Decimal(definition_score).quantize(Decimal('1e2')))
-    print(f"攻撃力: {atk}")
-    if len(influenced_word.split())<=2:
-        creature_name = f"{influenced_word} {character_animal}"
-    else:  
-        creature_name = f"The {character_animal} of {influenced_word}"
-    creature_name = safe_title(creature_name)
-    # ✅ 正規表現で不要部分を削除
-    creature_name = re.sub(r"[\-\(\[].*?(Remaster|Live|Remix|Version).*?[\)\]]", "", creature_name, flags=re.IGNORECASE)
-    creature_name = re.sub(r"\s{2,}", " ", creature_name).strip()  # 余分なスペースを削除
-    print(f"名前: {creature_name}")
-
-    # 3:4 比率にリサイズ（幅768, 高さ1024など）
-    img = Image.open(base_image_path).resize((768, 1024))
-    buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    image_data_uri = f"data:image/png;base64,{image_b64}"
-
-    prompt = (
-        f"Legendary creature in {character_animal} of picture is a soldier or knight of alien has some weapons and from a dark and mysterious world."
-        f"It has some factor relevant to the phrase of {influenced_word}. " #Background image is {album_image_url}
-        f"It is also designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
-    )
-    print(prompt)
-
-    headers = {
-        "Authorization": f"Token {REPLICATE_API_TOKEN}",
-        "Content-Type": "application/json",
-    }
-
-    MODEL_VERSION = random.choice([
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
-        "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a", 
-        "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64",
-        "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5",#
-        "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
-        "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986",
-        "d53918f6a274da520ba36474408999d2f91ea9c2c5afb17abef15c6c42030963",
-        "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
-        "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
-        "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
-        "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
-        "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
-        "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1",
-        "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
-
-    ])
-    print(MODEL_VERSION)
-    #MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
-
-    payload = {
-        "version": MODEL_VERSION,
-        "input": {
-            "prompt": prompt,
-            "image": album_image_url,
-            "image": image_data_uri,
-            "strength": 0.9,
-            "num_outputs": 1,
-            "aspect_ratio": "3:4"
-        }
-    }
-
-    # ✅ 非同期でpredictionを作成
-    res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload, timeout=120)
-    if res.status_code != 201:
-        return f"Image generation failed: {res.text}", 500
-
-    prediction = res.json()
-
-    # 🧠 creature_name をセッションに保存（後でタイトルに使う）
-    session["creature_name"] = creature_name
-    session["atk"] = atk
-
-    # ✅ 完了後にセッションを破棄してトークン再利用を防ぐ
-    session.clear()
-    print(f"🧹 {user_id} のセッション削除完了")
-
-    return jsonify({"status": "ok", "message": "image_generated"})
-
+        # 🎨 ベースとなるテンプレート画像を選択
+        definition_score = 0
+        influenced_word_box = []
+        album_image_url_box = []
+        creature_name = ""
+        artist_ids = []
+        artist_info_box = []
 
         
+        print("\n🎵 最近再生した曲:")
+        # 🎵 アーティストIDを抽出（重複除去）
+        for item in recent["items"]:
+            artist = item["track"]["artists"][0]
+            artist_ids.append(artist["id"])
+            track = item["track"]
+            genre = artist.get("genres", [])
+
+            album_image_url_box.append(track['album']['images'][0]['url'])
+            influenced_word_box.append(track['name'])
+            influenced_word_box.append(artist['name'])
+
+            artist_ids = list(artist_ids)
+
+            print(f"{track['name']} / {artist['name']} ({', '.join(genre)})")
+            # ===============================
+            # 🧠 アーティスト情報を一括取得＋キャッシュ
+            # ===============================
+            artist_info_box = []
+            uncached_ids = []
+            for aid in artist_ids:
+                cached_artist = redis_client.get(f"artist_info:{aid}")
+                if cached_artist:
+                    artist_info_box.append(json.loads(cached_artist))
+                else:
+                    uncached_ids.append(aid)
+
+            if uncached_ids:
+                print(f"🕐 Spotify APIに問い合わせ（未キャッシュ）: {len(uncached_ids)}件")
+                # 一括で取得（最大50件）
+                try:
+                    batch_info = sp.artists(uncached_ids)["artists"]
+                    for info in batch_info:
+                        redis_client.setex(f"artist_info:{info['id']}", 86400, json.dumps(info))  # 24hキャッシュ
+                    artist_info_box.extend(batch_info)
+                except Exception as e:
+                    print("🚨 Spotify artist API batch error:", e)
+                    time.sleep(0.1)  # rate-limit保護
+            else:
+                print("✅ 全てキャッシュから取得")
+
+            print(f"🎨 アーティスト情報を{len(artist_info_box)}件読み込み完了")
+
+        # ===============================
+        # 🧮 定義スコア計算
+        # ===============================
+        for artist_info in artist_info_box:
+            genres = artist_info.get("genres", [])
+            for g in genres:
+                definition_score += genre_weights.get(g, 0)
+                influenced_word_box.append(g)
+                print(f"{g}: {genre_weights.get(g)}")
+            if artist_info["name"] == "The Beatles":
+                definition_score += 50
+
+        # 動物の確定
+        if definition_score <= 2000:
+            character_animal = "bug"
+        elif definition_score <= 3000:
+            character_animal = "grasshopper"
+        elif definition_score <= 4000:
+            character_animal = "eel"
+        elif definition_score <= 5000:
+            character_animal = "fish"
+        elif definition_score <= 5100:
+            character_animal = "squid"
+        elif definition_score <= 5200:
+            character_animal = "crab"    
+        elif definition_score <= 5300:
+            character_animal = "lobster"
+        elif definition_score <= 5400:
+            character_animal = "octopus"
+        elif definition_score <= 5500:
+            character_animal = "parrot-fish"
+        elif definition_score <= 5600:
+            character_animal = "fish-market"
+        elif definition_score <= 5700:
+            character_animal = "frog"
+        elif definition_score <= 5800:
+            character_animal = "snake"
+        elif definition_score <= 5900:
+            character_animal = "shark"
+        elif definition_score <= 6000:
+            character_animal = "horse"
+        elif definition_score <= 6100:
+            character_animal = "crocodile"
+        elif definition_score <= 6200:
+            character_animal = "giraffe"
+        elif definition_score <= 6300:
+            character_animal = "sloth"
+        elif definition_score <= 6400:
+            character_animal = "orangutan"
+        elif definition_score <= 6700:
+            character_animal = "seal"
+        elif definition_score <= 6800:
+            character_animal = "dolphin"
+        elif definition_score <= 6900:
+            character_animal = "dog"
+        elif definition_score <= 7000:
+            character_animal = "penguin"
+        elif definition_score <= 9700:
+            character_animal = "lion"
+        elif definition_score <= 9800:
+            character_animal = "pelican"
+        elif definition_score <= 9900:
+            character_animal = "T-rex"
+        elif definition_score <= 10500:
+            character_animal = "parrot"
+        elif definition_score <= 11000:
+            character_animal = "cat"
+        elif definition_score <= 11500:
+            character_animal = "toy-dog"
+        elif definition_score <= 12000:
+            character_animal = "love-cat"
+        else:
+            character_animal = "dragon"
+
+        #if user_id == "noel1109.marble1101":
+        #    character_animal = "dolphin"
+
+        base_image_path = f"animal_templates/{character_animal}.png"
+        if not os.path.exists(base_image_path):
+            return f"Template not found: {base_image_path}", 404
+        
+        influenced_word = random.choice(influenced_word_box)
+        album_image_url = random.choice(album_image_url_box)
+
+        print(f"\n🏆 あなたの音楽スコア: {definition_score}")
+        print(f"動物: {character_animal}")
+        print(f"キーワード: {influenced_word}")
+        print(f"アルバム画像: {album_image_url}")
+        atk = int(Decimal(definition_score).quantize(Decimal('1e2')))
+        print(f"攻撃力: {atk}")
+        if len(influenced_word.split())<=2:
+            creature_name = f"{influenced_word} {character_animal}"
+        else:  
+            creature_name = f"The {character_animal} of {influenced_word}"
+        creature_name = creature_name.title()
+        # ✅ 正規表現で不要部分を削除
+        creature_name = re.sub(r"[\-\(\[].*?(Remaster|Live|Remix|Version).*?[\)\]]", "", creature_name, flags=re.IGNORECASE)
+        creature_name = re.sub(r"\s{2,}", " ", creature_name).strip()  # 余分なスペースを削除
+        print(f"名前: {creature_name}")
+
+        # 3:4 比率にリサイズ（幅768, 高さ1024など）
+        img = Image.open(base_image_path).resize((768, 1024))
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        image_data_uri = f"data:image/png;base64,{image_b64}"
+
+        prompt = (
+            f"Legendary creature in {character_animal} of picture is a soldier or knight of alien has some weapons and from a dark and mysterious world."
+            f"It has some factor relevant to the phrase of {influenced_word}. " #Background image is {album_image_url}
+            f"It is also designed like creepy spooky monsters in SF or horror films but not cartoonish rather realistic."
+        )
+        print(prompt)
+
+        headers = {
+            "Authorization": f"Token {REPLICATE_API_TOKEN}",
+            "Content-Type": "application/json",
+        }
+
+        MODEL_VERSION = random.choice([
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
+            "17658fb151a7dd2fe9a0043990c24913d7b97a6b35dcd953a27a366fedc4e20a", 
+            "535fdb4d34d13e899f8a61c3172ef1698230bed3c2faa0a17708abde760a5f64",
+            "40ab9b32cc4584bc069e22027fffb97e79ed550d4e7c20ed6d5d7ef89e8f08f5",
+            "e57c2dfbc48a476779abad3b6695839ecb779c18d0ec95f16d1f677a99cb3a42",
+            "08ea3dfde168eed9cdc4956ba0e9a506f56c9f74f96c0809a3250d10a9c77986",
+            "d53918f6a274da520ba36474408999d2f91ea9c2c5afb17abef15c6c42030963",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "426affa4cca9beb69b34c92c54133196902a4bf72dba90718f0de3124418eedb",
+            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
+            "15c6189d8a95836c3c296333aac9c416da4dfb0ae42650d4f10189441f29529f",
+            "bd2b772a22ecb2051cb1e08b58756fd2999781610ae618c52b5f4f76124c53d1",
+            "262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
+
+        ])
+        print(MODEL_VERSION)
+        #MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
+
+        payload = {
+            "version": MODEL_VERSION,
+            "input": {
+                "prompt": prompt,
+                "image": album_image_url,
+                "image": image_data_uri,
+                "strength": 0.9,
+                "num_outputs": 1,
+                "aspect_ratio": "3:4"
+            }
+        }
+
+        # ✅ 非同期でpredictionを作成
+        res = requests.post("https://api.replicate.com/v1/predictions", headers=headers, json=payload, timeout=120)
+        if res.status_code != 201:
+            return f"Image generation failed: {res.text}", 500
+
+        prediction = res.json()
+
+        # 🧠 creature_name をセッションに保存（後でタイトルに使う）
+        session["creature_name"] = creature_name
+        session["atk"] = atk
+
+        return jsonify({
+            "prediction_id": prediction["id"],
+            "status_url": f"/result/{prediction["id"]}"
+        })
+    except Exception as e:
+        print("🚨 /generate_api エラー発生:", e)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+    
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
-    # ✅ 一度は認証後ページを表示させる
-    access_token = session.get("access_token")
-    if not access_token:
-        print(f"⚠️ {user_id} のセッションがないため再ログインへ")
-        return redirect("/login")
-
-    # ユーザーのSpotify情報を一時表示
-    print(f"🎨 {user_id} のカード生成ページ表示")
-
-    # HTMLテンプレートを返す
     return render_template("generate.html", user_id=user_id)
-
-
 
 # =====================
 # 生成結果ポーリング
@@ -656,22 +653,14 @@ def service_worker():
 def serve_static(filename):
     return send_from_directory("static", filename)
 
+# =====================
+# Render用 Health Check
+# =====================
+@app.route("/health")
+def health_check():
+    return jsonify({"status": "ok"}), 200
 
 
-# ==============================
-# 🔹 セッションチェックAPI
-# ==============================
-@app.route("/session-check")
-def session_check():
-    # 🚫 常に未ログイン状態を返す
-    return jsonify({"logged_in": False})
-
-# ==============================
-# 🔹 faviconエラー防止
-# ==============================
-@app.route("/favicon.ico")
-def favicon():
-    return "", 204
 
 # =====================
 # サーバー起動
