@@ -89,8 +89,21 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
+    # 🔁 セッションリセット
+    session.clear()
+
+    # SpotifyOAuth生成
     sp_oauth = get_spotify_oauth()
-    return redirect(sp_oauth.get_authorize_url())
+    auth_url = sp_oauth.get_authorize_url()
+
+    # 強制的にSpotifyログイン画面を表示
+    if "show_dialog" not in auth_url:
+        if "?" in auth_url:
+            auth_url += "&show_dialog=true"
+        else:
+            auth_url += "?show_dialog=true"
+
+    return redirect(auth_url)
 
 @app.route("/callback")
 def callback():
