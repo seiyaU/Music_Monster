@@ -16,38 +16,6 @@ import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
 
-
-
-def get_spotify_client():
-    """セッションに基づいてSpotifyクライアントを最新トークンで生成"""
-    access_token = session.get("access_token")
-    refresh_token = session.get("refresh_token")
-    expires_at = session.get("expires_at")
-
-    if not access_token or not refresh_token:
-        print("❌ トークンが存在しない → 再ログイン必要")
-        return None
-
-    # ✅ トークン期限切れなら自動更新
-    if time.time() > expires_at:
-        print("🔁 トークン有効期限切れ → 更新開始")
-        sp_oauth = get_spotify_oauth()
-        new_token = sp_oauth.refresh_access_token(refresh_token)
-        session["access_token"] = new_token["access_token"]
-        session["expires_at"] = new_token["expires_at"]
-        access_token = new_token["access_token"]
-
-    return Spotify(auth=access_token)
-
-
-
-
-
-
-
-
-
-
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
     width, height = base_image.size
@@ -121,21 +89,8 @@ def home():
 # ################# Spotify認証 #################
 @app.route("/login")
 def login():
-    # 🔁 セッションリセット
-    session.clear()
-
-    # SpotifyOAuth生成
     sp_oauth = get_spotify_oauth()
-    auth_url = sp_oauth.get_authorize_url()
-
-    # 強制的にSpotifyログイン画面を表示
-    if "show_dialog" not in auth_url:
-        if "?" in auth_url:
-            auth_url += "&show_dialog=true"
-        else:
-            auth_url += "?show_dialog=true"
-
-    return redirect(auth_url)
+    return redirect(sp_oauth.get_authorize_url())
 
 @app.route("/callback")
 def callback():
@@ -152,7 +107,6 @@ def callback():
     user_id = user["id"]
 
     # ✅ Redis-backed session に保存
-    session.clear()
     session["user_id"] = user_id
     session["access_token"] = access_token
     session["refresh_token"] = token_info.get("refresh_token")
@@ -177,16 +131,25 @@ def generate_image(user_id):
     try:
         # ✅ セッション検証（他人のデータを防ぐ）
         current_user = session.get("user_id")
+        print("セッションからユーザーを取得できた")
         if not current_user or current_user != user_id:
             print("❌ セッション不一致: 他ユーザーアクセス検出")
             return jsonify({"status": "login_required"}), 401
         
-        # ✅ 常に最新トークンでSpotifyクライアントを生成
-        sp = get_spotify_client()
-        if not sp:
-            return jsonify({"status": "login_required"}), 401
+        # トークン有効期限チェック
+        if time.time() > session.get("expires_at", 0):
+            sp_oauth = get_spotify_oauth()
+            refresh_token = session.get("refresh_token")
+            new_token = sp_oauth.refresh_access_token(refresh_token)
+            session["access_token"] = new_token["access_token"]
+            session["expires_at"] = new_token["expires_at"]
+        
+        access_token = session.get("access_token")
+        if not access_token:
+            return jsonify({"error": "No valid access token"}), 401
 
-        print("Spotifyクライアントを更新しました。データ取得開始...")
+        sp = Spotify(auth=access_token)
+        print("Spotifyからデータ取得できた")
 
         # ===============================
         # 🟢 Spotify再生履歴のキャッシュ処理
