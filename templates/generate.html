@@ -322,6 +322,7 @@
       const imageEl = document.getElementById("output-image");
       const saveBtn = document.getElementById("save-btn");
       const sponsorBtn = document.getElementById("sponsor-btn");
+      const instaBtn = document.getElementById("insta-btn");
 
       async function check() {
         const res = await fetch(url);
@@ -331,9 +332,9 @@
           statusText.textContent = "✅ Image generation completed!";
           imageEl.src = data.image_url;
           imageEl.style.display = "block";
-          saveBtn.style.display = "inline-block";
-          sponsorBtn.style.display = "inline-block";
-
+          [saveBtn, sponsorBtn, instaBtn].forEach(btn => {
+            if (btn) btn.style.display = "inline-block";
+          });
           saveBtn.onclick = () => {
             const a = document.createElement("a");
             a.href = data.image_url;
