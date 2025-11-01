@@ -269,7 +269,7 @@ def generate_image(user_id):
         elif definition_score <= 4600:
             character_animal = "horse"
         elif definition_score <= 4800:
-            character_animal = "crocodile"
+            character_animal = "baby-cicada"
         elif definition_score <= 5000:
             character_animal = "giraffe"
         elif definition_score <= 5200:
@@ -279,11 +279,11 @@ def generate_image(user_id):
         elif definition_score <= 5600:
             character_animal = "seal"
         elif definition_score <= 5800:
-            character_animal = "dolphin"
-        elif definition_score <= 6000:
             character_animal = "eel"
-        elif definition_score <= 6200:
+        elif definition_score <= 6000:
             character_animal = "sloth"
+        elif definition_score <= 6200:
+            character_animal = "dolphin"
         elif definition_score <= 6400:
             character_animal = "lion"
         elif definition_score <= 6600:
@@ -298,6 +298,8 @@ def generate_image(user_id):
             character_animal = "goat"
         elif definition_score <= 7600:
             character_animal = "dogu"
+        elif definition_score <= 7800:
+            character_animal = "crocodile"
         elif definition_score <= 7800:
             character_animal = "cat"
         elif definition_score <= 9900:
