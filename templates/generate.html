@@ -16,14 +16,15 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh; /* 画面全体を使う */
+      min-height: 100vh;  /* ✅ 高さを最低100vhに変更 */
       margin: 0;
       background-color: #111;
       color: white;
       text-align: center;
       font-family: 'Inter', sans-serif;
       background: #459e5d;
-      padding-top: 80px;
+      padding: 80px 0 40px; /* ✅ 上下にゆとりを持たせる */
+      box-sizing: border-box;
     }
     h2 {
       font-size: 1.2rem;
@@ -117,6 +118,16 @@
     text-decoration: none;
     transition: background 0.2s;
   }
+  .message-link {
+    display: inline-block;
+    background: #ffffff;
+    color: #222;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
   .donate-link:hover {
     background: #ffe47a;
   }
@@ -192,8 +203,7 @@
         <a href="https://buymeacoffee.com/seiyau" target="_blank" class="donate-link">☕ Buy me a coffee</a>
       </p>
       <p>
-        If you like this app, consider supporting it.
-        <a href="https://www.instagram.com/seiya_experience/" target="_blank" class="donate-link">Send me your opinion or idea</a>
+        <a href="https://www.instagram.com/seiya_experience/" target="_blank" class="message-link">Send me your opinion or idea</a>
       </p>
 
     </div>
@@ -235,30 +245,28 @@
       >
         Buy Me a Coffee
       </a>
-      <a
-        href="https://www.instagram.com/seiya_experience/"
-        target="_blank"
-        rel="noopener noreferrer"
-        id="sponsor-btn"
-        class="action-btn"
-      >
+      <!-- ✅ Instagramボタンを追加 -->
+      <a href="https://www.instagram.com/seiya_experience/" target="_blank" rel="noopener noreferrer" id="insta-btn" class="action-btn">
         Send me your opinion or idea
       </a>
     </div>
-
-  <!-- ✅ AdSense広告を表示する場所 -->
-  <div class="ad-area" style="margin-top: 20px; text-align: center;">
-    <!-- for web app -->
-    <ins class="adsbygoogle"
-        style="display:block"
-        data-ad-client="ca-pub-7980341501217442"
-        data-ad-slot="6674114393"
-        data-ad-format="auto"
-        data-full-width-responsive="true"></ins>
-    <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
+      
+    <!-- ✅ AdSense広告を表示する場所 -->
+    <div class="ad-area" style="margin-top: 20px; text-align: center;">
+      <!-- for web app -->
+      <ins class="adsbygoogle"
+          style="display:block"
+          data-ad-client="ca-pub-7980341501217442"
+          data-ad-slot="6674114393"
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
+      <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
   </div>
+
+  
 
   <script>
     console.log("🟢 Page loaded");
