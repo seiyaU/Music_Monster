@@ -300,7 +300,7 @@ def generate_image(user_id):
             character_animal = "dogu"
         elif definition_score <= 7800:
             character_animal = "crocodile"
-        elif definition_score <= 7800:
+        elif definition_score <= 8500:
             character_animal = "cat"
         elif definition_score <= 9900:
             character_animal = "T-rex"
