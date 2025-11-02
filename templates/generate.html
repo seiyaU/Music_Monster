@@ -85,6 +85,7 @@
       background: #1ed760;
     }
     .about-app {
+    display: inline-block;
     max-width: 600px;
     background: rgba(255, 255, 255, 0.08);
     padding: 20px 25px;
@@ -258,11 +259,13 @@
       >
         Send me your opinion or idea
       </a>
-
+    </div>
+    <div class="buttons">
       <button id="back-btn" class="action-btn" style="background:#222; color:white;">
         🔙 Back to Start
       </button>
     </div>
+    
       
     <!-- ✅ AdSense広告を表示する場所 -->
     <div class="ad-area" style="margin-top: 20px; text-align: center;">
@@ -336,6 +339,7 @@
       const saveBtn = document.getElementById("save-btn");
       const sponsorBtn = document.getElementById("sponsor-btn");
       const instaBtn = document.getElementById("insta-btn");
+      const backBtn = document.getElementById("back-btn");
 
       async function check() {
         const res = await fetch(url);
@@ -345,10 +349,10 @@
           statusText.textContent = "✅ Image generation completed!";
           imageEl.src = data.image_url;
           imageEl.style.display = "block";
-          [saveBtn, sponsorBtn, instaBtn].forEach(btn => {
+          [saveBtn, sponsorBtn, instaBtn, backBtn].forEach(btn => {
             if (btn) btn.style.display = "inline-block";
           });
-          document.getElementById("back-btn").style.display = "inline-block";
+
           saveBtn.onclick = () => {
             const a = document.createElement("a");
             a.href = data.image_url;
