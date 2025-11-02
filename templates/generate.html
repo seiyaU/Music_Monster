@@ -258,6 +258,10 @@
       >
         Send me your opinion or idea
       </a>
+
+      <button id="back-btn" class="action-btn" style="background:#222; color:white;">
+        🔙 Back to Start
+      </button>
     </div>
       
     <!-- ✅ AdSense広告を表示する場所 -->
@@ -344,6 +348,7 @@
           [saveBtn, sponsorBtn, instaBtn].forEach(btn => {
             if (btn) btn.style.display = "inline-block";
           });
+          document.getElementById("back-btn").style.display = "inline-block";
           saveBtn.onclick = () => {
             const a = document.createElement("a");
             a.href = data.image_url;
@@ -359,6 +364,13 @@
       }
       check();
     }
+
+    // ✅ 戻るボタンの動作
+    document.getElementById("back-btn").addEventListener("click", () => {
+    document.getElementById("generation-screen").style.display = "none";
+    document.getElementById("start-screen").style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" }); // スクロールを一番上に戻す
+    });
 
     // ===============================
     // ✅ Service Worker の登録処理
