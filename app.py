@@ -277,7 +277,7 @@ def generate_image(user_id):
         elif definition_score <= 5400:
             character_animal = "orangutan"
         elif definition_score <= 5600:
-            character_animal = "seal"
+            character_animal = "lion"
         elif definition_score <= 5800:
             character_animal = "eel"
         elif definition_score <= 6000:
@@ -285,7 +285,7 @@ def generate_image(user_id):
         elif definition_score <= 6200:
             character_animal = "dolphin"
         elif definition_score <= 6400:
-            character_animal = "lion"
+            character_animal = "seal"
         elif definition_score <= 6600:
             character_animal = "penguin"
         elif definition_score <= 6800:
@@ -388,12 +388,13 @@ def generate_image(user_id):
         print(MODEL_VERSION)
         #MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
 
+        chosen_img = random(album_image_url, image_data_uri)
+
         payload = {
             "version": MODEL_VERSION,
             "input": {
                 "prompt": prompt,
-                "image": album_image_url,
-                "image": image_data_uri,
+                "image": chosen_img,
                 "strength": 0.9,
                 "num_outputs": 1,
                 "aspect_ratio": "3:4"
@@ -474,7 +475,7 @@ def get_result(prediction_id):
     holo = ImageEnhance.Brightness(holo).enhance(1.05)
     holo = ImageEnhance.Contrast(holo).enhance(1.1)
     # ✨ グリッター効果を全体に追加
-    if random.random() < 0.1:
+    if random.random() < 0.01:
         holo = add_glitter_effect(holo, glitter_density=0.009, blur=0.3, alpha=225)
         print("✨ グリッターを付与しました！（10% 確率）")
 
