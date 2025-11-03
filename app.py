@@ -388,7 +388,8 @@ def generate_image(user_id):
         print(MODEL_VERSION)
         #MODEL_VERSION="262c44d38a47d71dc0168728963b5549666a5be21d1a04b87675d3f682ed7267"
 
-        chosen_img = random.random(album_image_url, image_data_uri)
+        
+        chosen_img = random.choice([album_image_url, image_data_uri])
 
         payload = {
             "version": MODEL_VERSION,
