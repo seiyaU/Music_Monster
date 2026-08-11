@@ -176,11 +176,16 @@
   </style>
 </head>
 <body>
-  <!-- ✅ 初期画面：Spotify連携スタート -->
+  <!-- ✅ 初期画面 -->
   <div id="start-screen">
     <h2>Generate Music Cat</h2>
+    {% if import_mode %}
+    <p>Your Spotify history is ready.<br>Generate your monster card!</p>
+    <button id="start-btn">Generate from my history</button>
+    {% else %}
     <p>Log in with Spotify<br>to start generating your cat!</p>
     <button id="start-btn">Start with Spotify</button>
+    {% endif %}
 
     <div class="about-app">
       <h3>About This App</h3>
@@ -191,8 +196,8 @@
         “Listen to good music to get good monsters.”
       </p>
       <p>
-        Currently, it only uses my own Spotify history, even if you log in — so please enjoy it as a simple
-        <strong>Monster Card Generator</strong> for now.
+      Uploading your Spotify listening history lets the app use Spotify's catalog
+      genres while keeping the original history file on your device.
       </p>
       <p>
         Each card has a unique ID, and you’ll never see the same image twice.
@@ -208,6 +213,7 @@
 
     </div>
 
+    {% if not import_mode %}
     <div class="dev-note1">
       <h4>Help me Developers in the world</h4>
       <p>
@@ -217,6 +223,7 @@
         So, give me your hands.
       </p>
     </div>
+    {% endif %}
     
     <div class="dev-note2">
       <h4>Note to Spotify Developer Team</h4>

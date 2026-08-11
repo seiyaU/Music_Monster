@@ -15,6 +15,7 @@ import json
 import numpy as np  # ✅ ノイズ生成に利用
 from decimal import Decimal
 import re
+from uuid import uuid4
 
 def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
     """画像全体にグリッターを重ねる"""
@@ -82,9 +83,61 @@ def get_spotify_oauth():
         scope="user-read-recently-played user-read-email"
     )
 
+
+def get_catalog_access_token():
+    """Return a short-lived app token for public Spotify catalog metadata.
+
+    Import mode never receives a user's Spotify token.  The client secret stays
+    on the server and this token is used only for track/artist catalog lookups.
+    """
+    cache_key = "spotify:catalog_access_token"
+    cached_token = redis_client.get(cache_key)
+    if cached_token:
+        return cached_token.decode("utf-8") if isinstance(cached_token, bytes) else cached_token
+
+    if not CLIENT_ID or not CLIENT_SECRET:
+        raise RuntimeError("Spotify catalog credentials are not configured")
+
+    response = requests.post(
+        "https://accounts.spotify.com/api/token",
+        data={"grant_type": "client_credentials"},
+        auth=(CLIENT_ID, CLIENT_SECRET),
+        timeout=15,
+    )
+    response.raise_for_status()
+    token_data = response.json()
+    access_token = token_data["access_token"]
+    # Keep a small safety margin before Spotify's one-hour expiry.
+    redis_client.setex(cache_key, max(int(token_data.get("expires_in", 3600)) - 60, 60), access_token)
+    return access_token
+
+
+def get_catalog_tracks(track_ids):
+    """Fetch Spotify catalog tracks and preserve the supplied listening order."""
+    access_token = get_catalog_access_token()
+    headers = {"Authorization": f"Bearer {access_token}"}
+    tracks_by_id = {}
+
+    # Spotify accepts up to 50 IDs per catalog request.
+    unique_ids = list(dict.fromkeys(track_ids))
+    for index in range(0, len(unique_ids), 50):
+        batch = unique_ids[index:index + 50]
+        response = requests.get(
+            "https://api.spotify.com/v1/tracks",
+            headers=headers,
+            params={"ids": ",".join(batch)},
+            timeout=15,
+        )
+        response.raise_for_status()
+        for track in response.json().get("tracks", []):
+            if track:
+                tracks_by_id[track["id"]] = track
+
+    return [tracks_by_id[track_id] for track_id in track_ids if track_id in tracks_by_id]
+
 @app.route("/")
 def home():
-    return redirect("/login")
+    return render_template("index.html")
 
 # ################# Spotify認証 #################
 @app.route("/login")
@@ -125,6 +178,53 @@ def session_check():
         return jsonify({"logged_in": True, "user_id": user_id})
     return jsonify({"logged_in": False})
 
+
+@app.route("/import-history", methods=["POST"])
+def import_history():
+    """Create a short-lived generation session from browser-parsed history.
+
+    Only Spotify track IDs are accepted.  The raw JSON file, timestamps,
+    country, device details, and account name never reach this endpoint.
+    """
+    payload = request.get_json(silent=True) or {}
+    submitted_ids = payload.get("track_ids", [])
+    if not isinstance(submitted_ids, list):
+        return jsonify({"error": "track_ids must be a list"}), 400
+
+    track_ids = []
+    for track_id in submitted_ids:
+        if isinstance(track_id, str) and re.fullmatch(r"[A-Za-z0-9]{22}", track_id):
+            track_ids.append(track_id)
+        if len(track_ids) == 50:
+            break
+
+    if not track_ids:
+        return jsonify({"error": "No Spotify music track IDs were found in this file."}), 400
+
+    try:
+        catalog_tracks = get_catalog_tracks(track_ids)
+    except requests.RequestException as exc:
+        print("Spotify catalog lookup failed:", exc)
+        return jsonify({"error": "Spotify catalog data could not be retrieved. Please try again later."}), 502
+    except RuntimeError as exc:
+        print("Spotify catalog configuration error:", exc)
+        return jsonify({"error": "Spotify catalog lookup is not configured yet."}), 503
+
+    if not catalog_tracks:
+        return jsonify({"error": "The selected history did not contain available Spotify music tracks."}), 400
+
+    import_id = uuid4().hex
+    user_id = f"history-{import_id[:8]}"
+    # Match Spotify's recently-played response shape so the existing scoring and
+    # image-generation code can be reused unchanged.
+    recent = {"items": [{"track": track} for track in catalog_tracks]}
+    redis_client.setex(f"recently_played:{user_id}", 1800, json.dumps(recent))
+
+    session.clear()
+    session["user_id"] = user_id
+    session["import_mode"] = True
+    return jsonify({"generate_url": f"/generate/{user_id}", "tracks_found": len(catalog_tracks)})
+
 # AI画像生成エンドポイント
 @app.route("/generate_api/<user_id>", methods=["GET"])
 def generate_image(user_id):
@@ -136,20 +236,27 @@ def generate_image(user_id):
             print("❌ セッション不一致: 他ユーザーアクセス検出")
             return jsonify({"status": "login_required"}), 401
         
-        # トークン有効期限チェック
-        if time.time() > session.get("expires_at", 0):
-            sp_oauth = get_spotify_oauth()
-            refresh_token = session.get("refresh_token")
-            new_token = sp_oauth.refresh_access_token(refresh_token)
-            session["access_token"] = new_token["access_token"]
-            session["expires_at"] = new_token["expires_at"]
-        
-        access_token = session.get("access_token")
-        if not access_token:
-            return jsonify({"error": "No valid access token"}), 401
+        import_mode = session.get("import_mode", False)
+        if import_mode:
+            # JSON import mode uses only public catalog metadata; no Spotify user
+            # login or user access token is needed.
+            sp = Spotify(auth=get_catalog_access_token())
+            print("Spotify catalog data is ready for imported history")
+        else:
+            # トークン有効期限チェック
+            if time.time() > session.get("expires_at", 0):
+                sp_oauth = get_spotify_oauth()
+                refresh_token = session.get("refresh_token")
+                new_token = sp_oauth.refresh_access_token(refresh_token)
+                session["access_token"] = new_token["access_token"]
+                session["expires_at"] = new_token["expires_at"]
 
-        sp = Spotify(auth=access_token)
-        print("Spotifyからデータ取得できた")
+            access_token = session.get("access_token")
+            if not access_token:
+                return jsonify({"error": "No valid access token"}), 401
+
+            sp = Spotify(auth=access_token)
+            print("Spotifyからデータ取得できた")
 
         # ===============================
         # 🟢 Spotify再生履歴のキャッシュ処理
@@ -160,7 +267,7 @@ def generate_image(user_id):
         if cached_data:
             recent = json.loads(cached_data)
             print("🟢 Redisキャッシュから再生履歴を取得")
-        else:
+        elif not import_mode:
             print("🟠 Spotify APIから再生履歴を取得")
             try:
                 recent = sp.current_user_recently_played(limit=50)
@@ -168,6 +275,8 @@ def generate_image(user_id):
             except Exception as e:
                 print("🚨 Spotify API error:", e)
                 return jsonify({"error": "Spotify data fetch failed"}), 500
+        else:
+            return jsonify({"error": "Imported history has expired. Please import the JSON file again."}), 410
 
         if not recent.get("items"):
             return "No recent tracks found.", 404
@@ -426,7 +535,9 @@ def generate_image(user_id):
     
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
-    return render_template("generate.html", user_id=user_id)
+    if session.get("user_id") != user_id:
+        return redirect("/")
+    return render_template("generate.html", user_id=user_id, import_mode=session.get("import_mode", False))
 
 # =====================
 # 生成結果ポーリング

@@ -2,44 +2,136 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Music Monster</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Monster | Spotify履歴から生成</title>
   <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#1DB954" />
-  <script>
-    // ✅ PWA登録
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/serviceWorker.js").then(() => {
-        console.log("Service Worker registered!");
-      });
-    }
-  </script>
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      text-align: center;
-      background-color: #121212;
-      color: white;
-      margin: 0;
-      padding: 20px;
-    }
-    button {
-      background-color: #1DB954;
-      color: white;
-      border: none;
-      border-radius: 30px;
-      padding: 15px 25px;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #18a349;
-    }
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: linear-gradient(145deg, #102c20, #111 55%); color: #fff; font-family: system-ui, -apple-system, sans-serif; }
+    main { width: min(680px, calc(100% - 32px)); margin: 0 auto; padding: 44px 0 72px; }
+    h1 { margin: 0; font-size: clamp(2rem, 8vw, 3.2rem); line-height: 1.05; }
+    .lead { color: #d7e7dc; line-height: 1.7; margin: 18px 0 28px; }
+    .card { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 20px; padding: 22px; margin-top: 16px; }
+    h2 { font-size: 1.2rem; margin: 0 0 12px; }
+    ol { margin: 0; padding-left: 1.35rem; line-height: 1.75; color: #e5eee8; }
+    .privacy { font-size: .9rem; line-height: 1.65; color: #b9cfc0; }
+    .button, .file-button { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: 12px 18px; border: 0; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .button { background: #1DB954; color: #07160c; width: 100%; margin-top: 16px; }
+    .button:hover { background: #36d76d; }
+    .drop-zone { border: 2px dashed #63cc86; border-radius: 16px; padding: 28px 16px; text-align: center; background: rgba(29,185,84,.08); margin-top: 16px; }
+    .drop-zone.dragover { background: rgba(29,185,84,.2); border-color: #fff; }
+    input[type=file] { display: none; }
+    .file-button { background: #fff; color: #142218; margin-top: 8px; }
+    #status { min-height: 1.5em; margin: 14px 0 0; line-height: 1.5; color: #d7e7dc; }
+    .error { color: #ffb4ab !important; }
+    .small { font-size: .82rem; color: #b9cfc0; line-height: 1.5; }
+    details { margin-top: 12px; color: #d7e7dc; line-height: 1.6; }
+    summary { cursor: pointer; font-weight: 700; }
   </style>
 </head>
 <body>
-  <h1>🎵 Music Monster</h1>
-  <p>Spotifyログインしてあなたの音楽キャラクターを作ろう！</p>
-  <button onclick="location.href='/login'">Spotifyでログイン</button>
+  <main>
+    <h1>Music Monster</h1>
+    <p class="lead">Spotifyの再生履歴から、あなたの音楽性をモンスターカードにします。</p>
+
+    <section class="card">
+      <h2>はじめに：Spotifyで履歴を取得</h2>
+      <ol>
+        <li>Spotifyのプライバシー設定でデータをリクエストします。</li>
+        <li><strong>Extended Streaming History</strong> を含むJSONをダウンロードします。</li>
+        <li>この画面でJSONファイルを選ぶと、すぐに生成できます。</li>
+      </ol>
+      <a class="button" href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener">Spotifyのプライバシー設定を開く</a>
+      <p class="small">データの準備ができたら、この画面に戻ってきてください。</p>
+    </section>
+
+    <section class="card" aria-labelledby="upload-title">
+      <h2 id="upload-title">再生履歴JSONを読み込む</h2>
+      <p class="privacy">ファイルはこのブラウザ内で読み込みます。サーバーへ送るのは、生成に必要なSpotify曲ID（最大50件）だけです。再生時刻、国、端末情報、アカウント名は送信・保存しません。</p>
+      <div id="drop-zone" class="drop-zone">
+        <strong>JSONファイルをここにドロップ</strong><br />
+        <span class="small">または、ファイルを選択してください（複数選択可）</span><br />
+        <label class="file-button" for="history-files">JSONファイルを選択</label>
+        <input id="history-files" type="file" accept="application/json,.json" multiple />
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <details>
+        <summary>どのJSONを選べばよいですか？</summary>
+        <p>Spotifyのダウンロードに含まれる <code>endsong_*.json</code>、または旧形式の <code>StreamingHistory_music_*.json</code> を選んでください。複数ある場合はまとめて選べます。</p>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById("history-files");
+    const dropZone = document.getElementById("drop-zone");
+    const status = document.getElementById("status");
+
+    function setStatus(message, isError = false) {
+      status.textContent = message;
+      status.classList.toggle("error", isError);
+    }
+
+    function trackIdFromRow(row) {
+      const uri = row.spotify_track_uri || row.track_uri || "";
+      const match = typeof uri === "string" && uri.match(/^spotify:track:([A-Za-z0-9]{22})$/);
+      return match ? match[1] : null;
+    }
+
+    async function readHistory(files) {
+      if (!files.length) return;
+      setStatus("履歴をこの端末内で確認しています…");
+      const rows = [];
+      try {
+        for (const file of files) {
+          const data = JSON.parse(await file.text());
+          if (!Array.isArray(data)) continue;
+          rows.push(...data);
+        }
+      } catch (error) {
+        setStatus("JSONファイルを読み込めませんでした。Spotifyから取得した履歴JSONを選んでください。", true);
+        return;
+      }
+
+      const trackIds = rows
+        .sort((a, b) => String(b.ts || b.endTime || "").localeCompare(String(a.ts || a.endTime || "")))
+        .map(trackIdFromRow)
+        .filter(Boolean)
+        .slice(0, 50);
+
+      if (!trackIds.length) {
+        setStatus("Spotifyの音楽トラックが見つかりませんでした。endsong または StreamingHistory のJSONを選んでください。", true);
+        return;
+      }
+
+      setStatus(`${trackIds.length}件の再生履歴を選びました。Spotifyのジャンル情報を確認しています…`);
+      try {
+        const response = await fetch("/import-history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ track_ids: trackIds }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Import failed");
+        setStatus(`${result.tracks_found}件を確認しました。生成画面を開いています…`);
+        window.location.assign(result.generate_url);
+      } catch (error) {
+        setStatus(error.message || "読み込みを開始できませんでした。時間をおいてもう一度お試しください。", true);
+      }
+    }
+
+    input.addEventListener("change", () => readHistory([...input.files]));
+    ["dragenter", "dragover"].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.add("dragover");
+    }));
+    ["dragleave", "drop"].forEach((eventName) => dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("dragover");
+    }));
+    dropZone.addEventListener("drop", (event) => readHistory([...event.dataTransfer.files]));
+  </script>
 </body>
 </html>
