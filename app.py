@@ -169,12 +169,20 @@ def analyse_albums(albums):
     response = requests.post(
         f"https://api.replicate.com/v1/models/{REPLICATE_TEXT_MODEL}/predictions",
         headers=replicate_headers(),
-        json={"input": {"prompt": prompt}},
+        json={"input": {
+            "prompt": prompt,
+            "max_tokens": 350,
+            "temperature": 0.2,
+            "top_p": 0.9,
+        }},
         timeout=30,
     )
     response.raise_for_status()
     prediction = response.json()
-    deadline = time.monotonic() + 90
+    # This official model can be cold-started. Keep this below Render's
+    # 180-second Gunicorn request timeout, while allowing the initial worker
+    # boot substantially more time than a warm request needs.
+    deadline = time.monotonic() + 150
     while prediction.get("status") not in {"succeeded", "failed", "canceled"} and time.monotonic() < deadline:
         time.sleep(1)
         status_response = requests.get(prediction["urls"]["get"], headers=replicate_headers(), timeout=15)
@@ -182,6 +190,17 @@ def analyse_albums(albums):
         prediction = status_response.json()
 
     if prediction.get("status") != "succeeded":
+        # Keep user album data out of logs. Replicate's status, error code, and
+        # timings are sufficient to distinguish a cold start from a model error.
+        app.logger.error("replicate_text_prediction_failed=%s", json.dumps({
+            "event": "replicate_text_prediction_failed",
+            "prediction_id": prediction.get("id"),
+            "model": REPLICATE_TEXT_MODEL,
+            "status": prediction.get("status"),
+            "error": prediction.get("error"),
+            "metrics": prediction.get("metrics"),
+            "wait_seconds": 150,
+        }, ensure_ascii=False))
         raise RuntimeError("The taste analysis could not be completed.")
     return normalize_analysis(extract_json(prediction_text(prediction.get("output"))))
 
