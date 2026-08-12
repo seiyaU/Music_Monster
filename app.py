@@ -1,3 +1,4 @@
+import ast
 import base64
 import hashlib
 import json
@@ -74,6 +75,35 @@ def prediction_text(output):
     return str(output or "")
 
 
+def first_braced_object(text):
+    """Return the first complete braced object without trusting trailing text."""
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("No object found in text output.")
+
+    depth = 0
+    quote = None
+    escaped = False
+    for index, char in enumerate(text[start:], start):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index + 1]
+    raise ValueError("Incomplete object in text output.")
+
+
 def extract_json(text):
     """Accept JSON returned directly or inside a Markdown code fence.
 
@@ -84,13 +114,19 @@ def extract_json(text):
     """
     fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
     candidate = fenced.group(1) if fenced else text
-    start = candidate.find("{")
-    candidate = candidate[start:] if start >= 0 else candidate
-    candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
+    candidate = re.sub(r",\s*([}\]])", r"\1", first_braced_object(candidate))
     # raw_decode deliberately accepts any prose or a second JSON fragment that
     # follows the first complete object. The profile schema is then validated by
     # normalize_analysis before it can affect scoring or image generation.
-    value, _ = json.JSONDecoder().raw_decode(candidate.lstrip())
+    try:
+        value, _ = json.JSONDecoder().raw_decode(candidate.lstrip())
+    except json.JSONDecodeError:
+        # Some Llama responses use Python's dictionary spelling (single quotes)
+        # rather than JSON. literal_eval accepts literals only: it cannot call
+        # functions, access names, or execute user-provided code.
+        value = ast.literal_eval(candidate)
+    if not isinstance(value, dict):
+        raise ValueError("Analysis output must be an object.")
     return value
 
 
