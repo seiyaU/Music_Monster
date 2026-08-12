@@ -329,7 +329,7 @@ def complete_taste_analysis(analysis, cache_hit=False):
     app.logger.info("album_taste_analysis=%s", json.dumps({
         "event": "album_taste_analysis",
         "session_id": user_id,
-        "cache_hit": bool(cached),
+        "cache_hit": cache_hit,
         "analysis": analysis,
     }, ensure_ascii=False))
     return jsonify({"generate_url": f"/generate/{user_id}"})
