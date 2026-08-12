@@ -113,21 +113,29 @@ def extract_json(text):
     fails closed.
     """
     fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
-    candidate = fenced.group(1) if fenced else text
-    candidate = re.sub(r",\s*([}\]])", r"\1", first_braced_object(candidate))
-    # raw_decode deliberately accepts any prose or a second JSON fragment that
-    # follows the first complete object. The profile schema is then validated by
-    # normalize_analysis before it can affect scoring or image generation.
-    try:
-        value, _ = json.JSONDecoder().raw_decode(candidate.lstrip())
-    except json.JSONDecodeError:
-        # Some Llama responses use Python's dictionary spelling (single quotes)
-        # rather than JSON. literal_eval accepts literals only: it cannot call
-        # functions, access names, or execute user-provided code.
-        value = ast.literal_eval(candidate)
-    if not isinstance(value, dict):
-        raise ValueError("Analysis output must be an object.")
-    return value
+    remaining = fenced.group(1) if fenced else text
+    matches = []
+    while "{" in remaining:
+        start = remaining.find("{")
+        try:
+            candidate = re.sub(r",\s*([}\]])", r"\1", first_braced_object(remaining[start:]))
+            try:
+                value, _ = json.JSONDecoder().raw_decode(candidate.lstrip())
+            except json.JSONDecodeError:
+                # Some Llama responses use Python's dictionary spelling (single
+                # quotes). literal_eval accepts literals only: it cannot call
+                # functions, access names, or execute user-provided code.
+                value = ast.literal_eval(candidate)
+            if isinstance(value, dict) and {"genres", "visual_traits"}.issubset(value):
+                matches.append(value)
+        except (ValueError, SyntaxError, json.JSONDecodeError):
+            pass
+        remaining = remaining[start + 1:]
+    if not matches:
+        raise ValueError("No complete analysis object found in text output.")
+    # A model can echo instructions or examples before answering. Prefer the
+    # final schema-shaped object, which is the model's actual completion.
+    return matches[-1]
 
 
 def normalize_analysis(raw):
@@ -193,10 +201,12 @@ Classification rules:
 3. `confidence` is an integer from 1 to 100 that measures how strongly the category represents the nine-album collection as a whole, not certainty that it is an official genre.
 4. Prefer specific musical genres when supported. Use broader categories only when a specific category is not justified. Do not choose categories merely because a title contains a related word.
 5. `visual_traits` values are integers from 0 to 100. `labels` contains 1 to 3 short English visual-mood words, not genre names, album titles, artists, brands, or sentences.
-6. Your entire response MUST begin with `{{` and end with `}}`. Return valid JSON only: no Markdown, prose, code fences, comments, or trailing commas.
+6. Return only one valid JSON object: no Markdown, prose, code fences, comments, trailing commas, or explanation.
 
-Return exactly this JSON schema:
-{{"genres":[{{"name":"exact allowed category","confidence":1}},{{"name":"exact allowed category","confidence":1}},{{"name":"exact allowed category","confidence":1}},{{"name":"exact allowed category","confidence":1}},{{"name":"exact allowed category","confidence":1}}],"visual_traits":{{"energy":0,"darkness":0,"warmth":0,"dreaminess":0,"electronic":0,"experimental":0}},"labels":["short visual mood"]}}
+Required response fields:
+- genres: an array of exactly five objects, each with name and integer confidence.
+- visual_traits: an object with integer energy, darkness, warmth, dreaminess, electronic, and experimental fields.
+- labels: an array of one to three short English visual-mood words.
 
 ALLOWED_CATEGORIES:
 {allowed_genres}
@@ -413,7 +423,7 @@ def analyze_taste_status(job_id):
         redis_client.setex(job["cache_key"], 1800, json.dumps(analysis))
         redis_client.delete(job_key)
         return complete_taste_analysis(analysis)
-    except (ValueError, json.JSONDecodeError, KeyError):
+    except (ValueError, json.JSONDecodeError, KeyError, SyntaxError):
         app.logger.exception("Taste analysis output was invalid")
         # Do not log AI text because it could reproduce user-submitted album
         # data. These fields are enough to diagnose format failures safely.
