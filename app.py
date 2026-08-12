@@ -82,13 +82,16 @@ def extract_json(text):
     only that narrow case before parsing; malformed or incomplete output still
     fails closed.
     """
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
+    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
     candidate = fenced.group(1) if fenced else text
-    if not fenced:
-        start, end = candidate.find("{"), candidate.rfind("}")
-        candidate = candidate[start:end + 1] if start >= 0 and end > start else candidate
+    start = candidate.find("{")
+    candidate = candidate[start:] if start >= 0 else candidate
     candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
-    return json.loads(candidate)
+    # raw_decode deliberately accepts any prose or a second JSON fragment that
+    # follows the first complete object. The profile schema is then validated by
+    # normalize_analysis before it can affect scoring or image generation.
+    value, _ = json.JSONDecoder().raw_decode(candidate.lstrip())
+    return value
 
 
 def normalize_analysis(raw):
