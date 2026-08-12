@@ -5,7 +5,7 @@ Music Monster is a Flask web app that turns a user's nine life-defining albums i
 ## How it works
 
 1. The user enters exactly nine album title and artist pairs.
-2. A fixed Replicate text model returns a constrained, creative visual profile.
+2. A fixed Replicate text model starts a constrained, creative visual-profile analysis. The browser checks its status until it finishes, so a cold model start does not exceed the web request timeout.
 3. The profile selects exactly five distinct recognised genre keys from `data/genre_weights.yaml` and supplies visual traits.
 4. The existing scoring system selects a creature template and Replicate generates the card image.
 

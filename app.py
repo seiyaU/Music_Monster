@@ -160,7 +160,7 @@ BEGIN_UNTRUSTED_ALBUM_DATA
 END_UNTRUSTED_ALBUM_DATA"""
 
 
-def analyse_albums(albums):
+def create_analysis_prediction(albums):
     if not REPLICATE_TEXT_MODEL:
         raise RuntimeError("REPLICATE_TEXT_MODEL is not configured")
 
@@ -179,30 +179,9 @@ def analyse_albums(albums):
     )
     response.raise_for_status()
     prediction = response.json()
-    # This official model can be cold-started. Keep this below Render's
-    # 180-second Gunicorn request timeout, while allowing the initial worker
-    # boot substantially more time than a warm request needs.
-    deadline = time.monotonic() + 150
-    while prediction.get("status") not in {"succeeded", "failed", "canceled"} and time.monotonic() < deadline:
-        time.sleep(1)
-        status_response = requests.get(prediction["urls"]["get"], headers=replicate_headers(), timeout=15)
-        status_response.raise_for_status()
-        prediction = status_response.json()
-
-    if prediction.get("status") != "succeeded":
-        # Keep user album data out of logs. Replicate's status, error code, and
-        # timings are sufficient to distinguish a cold start from a model error.
-        app.logger.error("replicate_text_prediction_failed=%s", json.dumps({
-            "event": "replicate_text_prediction_failed",
-            "prediction_id": prediction.get("id"),
-            "model": REPLICATE_TEXT_MODEL,
-            "status": prediction.get("status"),
-            "error": prediction.get("error"),
-            "metrics": prediction.get("metrics"),
-            "wait_seconds": 150,
-        }, ensure_ascii=False))
-        raise RuntimeError("The taste analysis could not be completed.")
-    return normalize_analysis(extract_json(prediction_text(prediction.get("output"))))
+    if not prediction.get("urls", {}).get("get"):
+        raise RuntimeError("The taste analysis could not be started.")
+    return prediction
 
 
 def visual_direction_from_traits(traits):
@@ -309,13 +288,26 @@ def analyze_taste():
     cache_key = "album_taste:" + hashlib.sha256(json.dumps(clean_albums, sort_keys=True).encode()).hexdigest()
     cached = redis_client.get(cache_key)
     try:
-        analysis = json.loads(redis_text(cached)) if cached else analyse_albums(clean_albums)
-        if not cached:
-            redis_client.setex(cache_key, 1800, json.dumps(analysis))
+        if cached:
+            analysis = json.loads(redis_text(cached))
+            return complete_taste_analysis(analysis, cache_hit=True)
+
+        prediction = create_analysis_prediction(clean_albums)
+        job_id = uuid4().hex
+        redis_client.setex("analysis_job:" + job_id, 900, json.dumps({
+            "prediction_url": prediction["urls"]["get"],
+            "prediction_id": prediction.get("id"),
+            "cache_key": cache_key,
+        }))
+        session.clear()
+        session["analysis_job_id"] = job_id
+        return jsonify({"status": "pending", "status_url": f"/analyze-taste/status/{job_id}"}), 202
     except (requests.RequestException, RuntimeError, ValueError, json.JSONDecodeError) as error:
         app.logger.exception("Taste analysis failed")
         return jsonify({"error": "Taste analysis is temporarily unavailable. Please try again."}), 502
 
+
+def complete_taste_analysis(analysis, cache_hit=False):
     user_id = f"taste-{uuid4().hex[:12]}"
     session.clear()
     session["user_id"] = user_id
@@ -329,6 +321,54 @@ def analyze_taste():
         "analysis": analysis,
     }, ensure_ascii=False))
     return jsonify({"generate_url": f"/generate/{user_id}"})
+
+
+@app.route("/analyze-taste/status/<job_id>")
+def analyze_taste_status(job_id):
+    if session.get("analysis_job_id") != job_id:
+        return jsonify({"error": "This analysis session has expired. Please try again."}), 401
+
+    job_key = "analysis_job:" + job_id
+    job_data = redis_client.get(job_key)
+    if not job_data:
+        session.pop("analysis_job_id", None)
+        return jsonify({"error": "This analysis took too long. Please try again."}), 410
+
+    try:
+        job = json.loads(redis_text(job_data))
+        response = requests.get(job["prediction_url"], headers=replicate_headers(), timeout=15)
+        response.raise_for_status()
+        prediction = response.json()
+    except (requests.RequestException, RuntimeError, ValueError, json.JSONDecodeError, KeyError):
+        app.logger.exception("Taste analysis status check failed")
+        return jsonify({"error": "Taste analysis is temporarily unavailable. Please try again."}), 502
+
+    status = prediction.get("status")
+    if status in {"starting", "processing"}:
+        return jsonify({"status": "pending", "prediction_status": status})
+    if status != "succeeded":
+        app.logger.error("replicate_text_prediction_failed=%s", json.dumps({
+            "event": "replicate_text_prediction_failed",
+            "prediction_id": prediction.get("id") or job.get("prediction_id"),
+            "model": REPLICATE_TEXT_MODEL,
+            "status": status,
+            "error": prediction.get("error"),
+            "metrics": prediction.get("metrics"),
+        }, ensure_ascii=False))
+        redis_client.delete(job_key)
+        session.pop("analysis_job_id", None)
+        return jsonify({"error": "Taste analysis could not be completed. Please try again."}), 502
+
+    try:
+        analysis = normalize_analysis(extract_json(prediction_text(prediction.get("output"))))
+        redis_client.setex(job["cache_key"], 1800, json.dumps(analysis))
+        redis_client.delete(job_key)
+        return complete_taste_analysis(analysis)
+    except (ValueError, json.JSONDecodeError, KeyError):
+        app.logger.exception("Taste analysis output was invalid")
+        redis_client.delete(job_key)
+        session.pop("analysis_job_id", None)
+        return jsonify({"error": "Taste analysis returned an unusable result. Please try again."}), 502
 
 
 @app.route("/generate/<user_id>")

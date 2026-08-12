@@ -151,16 +151,29 @@
           if (seen.has(key)) return false; seen.add(key); return true;
         }));
       }
-      button.disabled = true; status.classList.remove('error'); status.textContent = 'Reading the visual mood of your nine albums…';
+      button.disabled = true; status.classList.remove('error'); status.textContent = 'Preparing your music profile… This can take a few minutes the first time.';
       try {
         const response = await fetch('/analyze-taste', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({albums}) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Analysis failed.');
-        window.location.assign(data.generate_url);
+        if (data.generate_url) { window.location.assign(data.generate_url); return; }
+        await waitForAnalysis(data.status_url);
       } catch (error) {
         status.classList.add('error'); status.textContent = error.message || 'Analysis failed. Please try again.'; updateProgress();
       }
     });
+    async function waitForAnalysis(statusUrl) {
+      while (true) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        const response = await fetch(statusUrl, { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Analysis failed.');
+        if (data.generate_url) { window.location.assign(data.generate_url); return; }
+        status.textContent = data.prediction_status === 'processing'
+          ? 'Creating your visual music profile…'
+          : 'Preparing your music profile… This can take a few minutes the first time.';
+      }
+    }
     renderSavedAlbums(); updateProgress();
   </script>
 </body>
