@@ -75,12 +75,19 @@ def prediction_text(output):
 
 
 def extract_json(text):
-    """Accept JSON returned directly or inside a Markdown code fence."""
+    """Accept JSON returned directly or inside a Markdown code fence.
+
+    The text model is instructed to return strict JSON, but a trailing comma
+    before a closing array/object is a common harmless formatting error. Repair
+    only that narrow case before parsing; malformed or incomplete output still
+    fails closed.
+    """
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
     candidate = fenced.group(1) if fenced else text
     if not fenced:
         start, end = candidate.find("{"), candidate.rfind("}")
         candidate = candidate[start:end + 1] if start >= 0 and end > start else candidate
+    candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
     return json.loads(candidate)
 
 
