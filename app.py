@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import random
 import re
 import time
 from decimal import Decimal
@@ -13,6 +14,7 @@ from uuid import uuid4
 import redis
 import requests
 import yaml
+import numpy as np
 from flask import Flask, jsonify, render_template, request, send_from_directory, session
 from flask_session import Session
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
@@ -57,6 +59,26 @@ REPLICATE_IMAGE_MODEL_VERSION = os.getenv(
     "REPLICATE_IMAGE_MODEL_VERSION",
     "294de709b06655e61bb0149ec61ef8b5d3ca030517528ac34f8252b18b09b7ad",
 )
+
+
+def add_glitter_effect(base_image, glitter_density=0.009, blur=0.9, alpha=225):
+    """Apply the original holographic card glitter overlay."""
+    width, height = base_image.size
+    glitter_layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(glitter_layer)
+    for _ in range(int(width * height * glitter_density)):
+        x = random.randint(0, width - 1)
+        y = random.randint(0, height - 1)
+        size = random.choice([6, 5, 2, 3])
+        color = random.choice([
+            (255, 255, 255, random.randint(150, 220)),
+            (255, 215, 0, random.randint(130, 200)),
+            (173, 216, 230, random.randint(120, 180)),
+            (255, 182, 193, random.randint(120, 180)),
+        ])
+        draw.ellipse((x, y, x + size, y + size), fill=color)
+    glitter_layer = glitter_layer.filter(ImageFilter.GaussianBlur(blur))
+    return Image.alpha_composite(base_image.convert("RGBA"), glitter_layer)
 def redis_text(value):
     return value.decode("utf-8") if isinstance(value, bytes) else value
 
@@ -505,23 +527,92 @@ def get_result(prediction_id):
         image_url = output[0] if isinstance(output, list) else output
         image_response = requests.get(image_url, timeout=60)
         image_response.raise_for_status()
-        image = Image.open(BytesIO(image_response.content)).convert("RGBA")
-        image = ImageEnhance.Contrast(image).enhance(1.08)
-        image = image.filter(ImageFilter.SMOOTH_MORE)
-        draw = ImageDraw.Draw(image)
+        image = Image.open(BytesIO(image_response.content)).convert("RGB").convert("RGBA")
+        width, height = image.size
+
+        # Restore the original holographic card finish.
+        gradient = Image.new("RGBA", image.size)
+        for x in range(width):
+            red = int(128 + 127 * np.sin(x / 20.0))
+            green = int(128 + 127 * np.sin(x / 25.0 + 2))
+            blue = int(128 + 127 * np.sin(x / 30.0 + 4))
+            for y in range(height):
+                gradient.putpixel((x, y), (red, green, blue, 40))
+        noise = Image.effect_noise(image.size, 64).convert("L")
+        noise = ImageEnhance.Contrast(noise).enhance(2.0)
+        noise_layer = Image.merge("RGBA", (noise, noise, noise, noise))
+        noise_layer.putalpha(40)
+        hologram = Image.alpha_composite(image, gradient)
+        hologram = Image.alpha_composite(hologram, noise_layer)
+        hologram = hologram.filter(ImageFilter.SMOOTH_MORE)
+        hologram = ImageEnhance.Brightness(hologram).enhance(1.05)
+        hologram = ImageEnhance.Contrast(hologram).enhance(1.1)
+        if random.random() < 0.01:
+            hologram = add_glitter_effect(hologram, glitter_density=0.009, blur=0.3, alpha=225)
+
         try:
             title_font = ImageFont.truetype("static/fonts/SuperBread-ywdRV.ttf", 50)
-            info_font = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 38)
+            info_font = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 10)
+            attack_font = ImageFont.truetype("static/fonts/Caprasimo-Regular.ttf", 44)
         except OSError:
             title_font = ImageFont.load_default()
             info_font = ImageFont.load_default()
+            attack_font = ImageFont.load_default()
         title = session.get("creature_name", "Unknown Creature")
         attack = session.get("atk", 0)
-        draw.text((28, 20), title, font=title_font, fill=(255, 255, 255, 255), stroke_width=3, stroke_fill=(0, 0, 0, 220))
-        draw.text((image.width - 190, image.height - 70), f"ATK: {attack}", font=info_font, fill=(255, 255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0, 220))
+        card_id = f"#{prediction_id[:8].upper()}"
+        rainbow = [(255, 0, 0), (255, 127, 70), (200, 200, 70), (100, 230, 70), (0, 0, 255), (75, 0, 130), (148, 0, 211)]
+        outline_width, shadow_offset = 4, (6, 6)
+        outline_color, shadow_color = (255, 255, 255, 255), (0, 0, 0, 180)
+
+        title_layer = Image.new("RGBA", hologram.size, (0, 0, 0, 0))
+        title_draw = ImageDraw.Draw(title_layer)
+        title_box = title_draw.textbbox((0, 0), title, font=title_font)
+        title_x = (width - (title_box[2] - title_box[0])) / 2
+        for index, character in enumerate(title):
+            color = rainbow[index % len(rainbow)]
+            title_draw.text((title_x + shadow_offset[0], 5 + shadow_offset[1]), character, font=title_font, fill=shadow_color)
+            for dx in range(-outline_width, outline_width + 1):
+                for dy in range(-outline_width, outline_width + 1):
+                    if dx * dx + dy * dy <= outline_width * outline_width:
+                        title_draw.text((title_x + dx, 5 + dy), character, font=title_font, fill=outline_color)
+            title_draw.text((title_x, 5), character, font=title_font, fill=color + (255,))
+            char_box = title_draw.textbbox((0, 0), character, font=title_font)
+            title_x += char_box[2] - char_box[0]
+        filtered_title = title_layer.filter(ImageFilter.SMOOTH_MORE)
+        filtered_title = ImageEnhance.Brightness(filtered_title).enhance(0.9)
+        filtered_title = ImageEnhance.Contrast(filtered_title).enhance(0.9)
+        final_image = Image.alpha_composite(hologram, ImageEnhance.Brightness(filtered_title.filter(ImageFilter.GaussianBlur(6))).enhance(1.6))
+        final_image = Image.alpha_composite(final_image, filtered_title)
+
+        attack_text = f"ATK: {attack}"
+        attack_layer = Image.new("RGBA", hologram.size, (0, 0, 0, 0))
+        attack_draw = ImageDraw.Draw(attack_layer)
+        attack_box = attack_draw.textbbox((0, 0), attack_text, font=attack_font)
+        attack_x = width - (attack_box[2] - attack_box[0]) - 40
+        attack_y = height - (attack_box[3] - attack_box[1]) - 70
+        for index, character in enumerate(attack_text):
+            color = rainbow[index % len(rainbow)]
+            attack_draw.text((attack_x + shadow_offset[0], attack_y + shadow_offset[1]), character, font=attack_font, fill=shadow_color)
+            for dx in range(-outline_width, outline_width + 1):
+                for dy in range(-outline_width, outline_width + 1):
+                    if dx * dx + dy * dy <= outline_width * outline_width:
+                        attack_draw.text((attack_x + dx, attack_y + dy), character, font=attack_font, fill=outline_color)
+            attack_draw.text((attack_x, attack_y), character, font=attack_font, fill=color + (255,))
+            char_box = attack_draw.textbbox((0, 0), character, font=attack_font)
+            attack_x += char_box[2] - char_box[0]
+        filtered_attack = attack_layer.filter(ImageFilter.SMOOTH_MORE)
+        filtered_attack = ImageEnhance.Brightness(filtered_attack).enhance(0.95)
+        filtered_attack = ImageEnhance.Contrast(filtered_attack).enhance(1.05)
+        final_image = Image.alpha_composite(final_image, ImageEnhance.Brightness(filtered_attack.filter(ImageFilter.GaussianBlur(6))).enhance(1.6))
+        final_image = Image.alpha_composite(final_image, filtered_attack)
+
+        info_draw = ImageDraw.Draw(final_image)
+        card_box = info_draw.textbbox((0, 0), card_id, font=info_font)
+        info_draw.text((width - (card_box[2] - card_box[0]) - 40, height - (card_box[3] - card_box[1]) - 20), card_id, font=info_font, fill=(255, 255, 255, 230))
         os.makedirs("static/generated", exist_ok=True)
-        output_path = f"static/generated/card_{prediction_id}.png"
-        image.convert("RGB").save(output_path)
+        output_path = f"static/generated/hologram_{prediction_id}.png"
+        final_image.save(output_path)
         return jsonify({"status": "succeeded", "image_url": f"{request.host_url.rstrip('/')}/{output_path}", "title": title})
     except (requests.RequestException, RuntimeError, OSError) as error:
         app.logger.exception("Prediction result failed")
