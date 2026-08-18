@@ -2,95 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Music Monster Studio</title>
-  <link rel="icon" type="image/png" href="/static/icon.png" />
-  <meta name="theme-color" content="#07110d" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07110d" />
+  <title>Music Monster Studio</title>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
-    body { min-height: 100vh; margin: 0; color: #f4f5ed; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at 16% 4%, #1c5038 0, transparent 29rem), #07110d; }
-    main { display: flex; width: min(100% - 3rem, 1000px); min-height: 100vh; margin: auto; padding: 2rem 0; flex-direction: column; }
-    .masthead { display: flex; align-items: center; justify-content: space-between; color: #b8c5bd; font-size: .7rem; font-weight: 700; letter-spacing: .13em; }
+    body { min-height: 100vh; margin: 0; color: #f4f5ed; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: radial-gradient(circle at 16% 4%, #1c5038 0, transparent 29rem), #07110d; }
+    main { display: flex; width: min(100% - 3rem, 900px); min-height: 100vh; margin: auto; padding: 2rem 0; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .masthead { position: absolute; top: 2rem; display: flex; width: min(100% - 3rem, 900px); justify-content: space-between; color: #b8c5bd; font-size: .7rem; font-weight: 700; letter-spacing: .13em; }
     .masthead a { color: inherit; text-decoration: none; }
     .masthead span { color: #b7ed78; }
-    #start-screen, #generation-screen { width: 100%; max-width: 720px; margin: auto; text-align: center; }
-    #generation-screen { display: none; flex-direction: column; align-items: center; }
     .eyebrow { color: #b7ed78; font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
-    h1 { max-width: 9ch; margin: .8rem auto 1.4rem; font-size: clamp(3.6rem, 10vw, 7rem); line-height: .83; letter-spacing: -.075em; }
-    h2 { margin: .8rem 0; font-size: clamp(2.25rem, 6vw, 4rem); letter-spacing: -.06em; }
-    .copy, #status { max-width: 33rem; margin: 0 auto; color: #b8c5bd; font-size: 1.05rem; line-height: 1.65; }
-    .private-note { display: inline-flex; margin-top: 2rem; padding: .6rem .8rem; color: #91a59a; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; font-size: .72rem; }
-    button, .action-btn { appearance: none; border: 0; cursor: pointer; font: inherit; }
-    #start-btn { display: inline-flex; margin-top: 1.5rem; padding: .9rem 1.15rem; align-items: center; justify-content: center; color: #07110d; border-radius: .55rem; background: #b7ed78; font-weight: 800; transition: transform .2s ease, background .2s ease; }
-    #start-btn:hover { background: #d3ffa2; transform: translateY(-2px); }
-    #output-image { display: none; width: min(100%, 640px); max-height: 72vh; margin: 1rem 0 .6rem; border: 1px solid rgba(255,255,255,.16); border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgba(0,0,0,.38); object-fit: contain; }
+    h1 { margin: .8rem 0; font-size: clamp(2.6rem, 7vw, 5.3rem); letter-spacing: -.07em; }
+    #status { max-width: 30rem; margin: 0; color: #b8c5bd; line-height: 1.6; }
+    #output-image { display: none; width: min(100%, 640px); max-height: 72vh; margin: 1.2rem 0 .6rem; border: 1px solid rgba(255,255,255,.16); border-radius: 1rem; box-shadow: 0 1.5rem 4rem rgba(0,0,0,.38); object-fit: contain; }
     .buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-top: .6rem; }
-    .action-btn { display: none; padding: .75rem 1rem; color: #ecf4df; border: 1px solid rgba(255,255,255,.18); border-radius: .5rem; background: rgba(255,255,255,.08); text-decoration: none; font-size: .88rem; transition: border-color .2s ease, background .2s ease; }
+    .action-btn { display: none; padding: .75rem 1rem; color: #ecf4df; border: 1px solid rgba(255,255,255,.18); border-radius: .5rem; background: rgba(255,255,255,.08); cursor: pointer; font: inherit; font-size: .88rem; text-decoration: none; }
     .action-btn:hover { border-color: #b7ed78; background: rgba(183,237,120,.14); }
     #save-btn { color: #07110d; border-color: #b7ed78; background: #b7ed78; font-weight: 800; }
-    #back-btn { color: #91a59a; }
-    .studio-links { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-top: 3rem; }
-    .studio-links a { padding: .9rem; color: #b8c5bd; border: 1px solid rgba(255,255,255,.12); border-radius: .6rem; background: rgba(255,255,255,.035); font-size: .8rem; text-decoration: none; }
-    .studio-links a:hover { color: #f4f5ed; border-color: #b7ed78; }
-    @media (max-width: 600px) { main { width: min(100% - 2rem, 1000px); } .studio-links { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <main>
     <header class="masthead"><a href="/">MUSIC MONSTER</a><span>PRIVATE STUDIO</span></header>
-    <section id="start-screen">
-      <p class="eyebrow">New card session</p>
-      <h1>Make a listening creature.</h1>
-      <p class="copy">Turn the latest listening history into a new Music Monster card.</p>
-      <button id="start-btn">Connect Spotify and generate</button>
-      <p class="private-note">Studio access is reserved for the artist.</p>
-    </section>
-    <section id="generation-screen">
-      <p class="eyebrow">In progress</p>
-      <h2>Your card is forming.</h2>
-      <p id="status">Reading the listening history…</p>
-      <img id="output-image" alt="Generated Music Monster card" />
-      <div class="buttons">
-        <button id="save-btn" class="action-btn">Download image</button>
-        <a href="https://buymeacoffee.com/seiyau" target="_blank" rel="noopener noreferrer" id="sponsor-btn" class="action-btn">☕ Buy me a coffee</a>
-        <a href="https://www.instagram.com/seiya_experience/" target="_blank" rel="noopener noreferrer" id="insta-btn" class="action-btn">Send me your opinion or idea</a>
-        <button id="back-btn" class="action-btn">Start another card</button>
-      </div>
-    </section>
-    <nav class="studio-links" aria-label="Support and feedback">
-      <a href="https://buymeacoffee.com/seiyau" target="_blank" rel="noopener noreferrer">☕ Buy me a coffee</a>
-      <a href="https://www.instagram.com/seiya_experience/" target="_blank" rel="noopener noreferrer">Send me your opinion or idea ↗</a>
-    </nav>
+    <p class="eyebrow">New card session</p>
+    <h1>Your card is forming.</h1>
+    <p id="status">Reading the listening history…</p>
+    <img id="output-image" alt="Generated Music Monster card" />
+    <div class="buttons">
+      <button id="save-btn" class="action-btn">Download image</button>
+      <button id="again-btn" class="action-btn">Generate another card</button>
+    </div>
   </main>
   <script>
-    document.getElementById("start-btn").addEventListener("click", async () => {
+    async function startGeneration() {
       try {
-        const res = await fetch("/session-check");
+        const res = await fetch("/generate_api/{{ user_id }}");
+        if (res.status === 401) { window.location.href = "/"; return; }
         const data = await res.json();
-        if (data.logged_in) startGeneration(data.user_id);
-        else window.location.href = "/login";
-      } catch (err) {
-        console.error("Session check failed:", err);
-        window.location.href = "/login";
-      }
-    });
-
-    async function startGeneration(userId) {
-      document.getElementById("start-screen").style.display = "none";
-      document.getElementById("generation-screen").style.display = "flex";
-      try {
-        const res = await fetch(`/generate_api/${userId}`);
-        if (res.status === 401) { window.location.href = "/login"; return; }
-        const data = await res.json();
-        if (!data.status_url) {
-          document.getElementById("status").textContent = "Generation could not be started.";
-          console.error("Invalid generation response:", data);
-          return;
-        }
+        if (!data.status_url) throw new Error("The generation request did not return a status URL.");
         pollStatus(data.status_url);
       } catch (error) {
-        document.getElementById("status").textContent = "Failed to start generation.";
+        document.getElementById("status").textContent = "Generation could not be started.";
         console.error("Generation request failed:", error);
       }
     }
@@ -99,17 +53,15 @@
       const statusText = document.getElementById("status");
       const imageEl = document.getElementById("output-image");
       const saveBtn = document.getElementById("save-btn");
-      const sponsorBtn = document.getElementById("sponsor-btn");
-      const instaBtn = document.getElementById("insta-btn");
-      const backBtn = document.getElementById("back-btn");
+      const againBtn = document.getElementById("again-btn");
       async function check() {
         const res = await fetch(url);
         const data = await res.json();
         if (data.status === "succeeded") {
-          statusText.textContent = "Card complete.";
+          statusText.textContent = "Card complete. It has been added to the public archive.";
           imageEl.src = data.image_url;
           imageEl.style.display = "block";
-          [saveBtn, sponsorBtn, instaBtn, backBtn].forEach(button => { button.style.display = "inline-flex"; });
+          [saveBtn, againBtn].forEach(button => { button.style.display = "inline-flex"; });
           saveBtn.onclick = () => {
             const link = document.createElement("a");
             link.href = data.image_url;
@@ -126,11 +78,8 @@
       check();
     }
 
-    document.getElementById("back-btn").addEventListener("click", () => {
-      document.getElementById("generation-screen").style.display = "none";
-      document.getElementById("start-screen").style.display = "block";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    document.getElementById("again-btn").addEventListener("click", () => window.location.reload());
+    startGeneration();
   </script>
 </body>
 </html>

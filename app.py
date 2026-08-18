@@ -475,6 +475,8 @@ def generate_image(user_id):
     
 @app.route("/generate/<user_id>")
 def generate_page(user_id):
+    if session.get("user_id") != user_id:
+        return "This studio is private.", 403
     return render_template("generate.html", user_id=user_id)
 
 # =====================
