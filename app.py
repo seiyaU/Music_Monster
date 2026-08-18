@@ -75,10 +75,10 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 OWNER_SPOTIFY_ID = os.getenv("OWNER_SPOTIFY_ID")
 GALLERY_INDEX_KEY = "music_monster:gallery:index"
 GALLERY_CARD_PREFIX = "music_monster:gallery:card:"
-GALLERY_MAX_ITEMS = 48
+GALLERY_MAX_ITEMS = 6
 
 
-def get_public_gallery(limit=24):
+def get_public_gallery(limit=GALLERY_MAX_ITEMS):
     """Return the newest generated cards that are safe to show publicly."""
     try:
         prediction_ids = redis_client.lrange(GALLERY_INDEX_KEY, 0, limit - 1)
@@ -112,7 +112,19 @@ def save_public_card(prediction_id, image_url, title, card_id):
         )
         if was_added:
             redis_client.lpush(GALLERY_INDEX_KEY, prediction_id)
+            expired_ids = redis_client.lrange(GALLERY_INDEX_KEY, GALLERY_MAX_ITEMS, -1)
             redis_client.ltrim(GALLERY_INDEX_KEY, 0, GALLERY_MAX_ITEMS - 1)
+            for expired_id in expired_ids:
+                if isinstance(expired_id, bytes):
+                    expired_id = expired_id.decode("utf-8")
+                redis_client.delete(f"{GALLERY_CARD_PREFIX}{expired_id}")
+                if re.fullmatch(r"[a-z0-9]+", expired_id):
+                    expired_image_path = os.path.join(
+                        "static", "generated", f"hologram_{expired_id}.png"
+                    )
+                    if os.path.isfile(expired_image_path):
+                        os.remove(expired_image_path)
+                        print(f"🗑️ Expired public gallery image removed: {expired_id}")
             print(f"✅ Public gallery card saved: {card_id}")
     except Exception as error:
         print(f"⚠️ Public gallery card could not be saved: {error}")
