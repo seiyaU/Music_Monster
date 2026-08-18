@@ -9,6 +9,7 @@ from flask_session import Session
 import redis
 import time
 import yaml
+from datetime import datetime, timezone
 from PIL import Image, ImageEnhance, ImageFilter, ImageDraw, ImageFont
 from io import BytesIO
 import json
@@ -72,6 +73,49 @@ CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 OWNER_SPOTIFY_ID = os.getenv("OWNER_SPOTIFY_ID")
+GALLERY_INDEX_KEY = "music_monster:gallery:index"
+GALLERY_CARD_PREFIX = "music_monster:gallery:card:"
+GALLERY_MAX_ITEMS = 48
+
+
+def get_public_gallery(limit=24):
+    """Return the newest generated cards that are safe to show publicly."""
+    try:
+        prediction_ids = redis_client.lrange(GALLERY_INDEX_KEY, 0, limit - 1)
+        cards = []
+        for prediction_id in prediction_ids:
+            if isinstance(prediction_id, bytes):
+                prediction_id = prediction_id.decode("utf-8")
+            value = redis_client.get(f"{GALLERY_CARD_PREFIX}{prediction_id}")
+            if value:
+                if isinstance(value, bytes):
+                    value = value.decode("utf-8")
+                cards.append(json.loads(value))
+        return cards
+    except Exception as error:
+        print(f"⚠️ Public gallery could not be loaded: {error}")
+        return []
+
+
+def save_public_card(prediction_id, image_url, title, card_id):
+    """Add a completed card to the public archive once, even if it is polled again."""
+    card = {
+        "prediction_id": prediction_id,
+        "image_url": image_url,
+        "title": title,
+        "card_id": card_id,
+        "created_at": datetime.now(timezone.utc).strftime("%d %b %Y"),
+    }
+    try:
+        was_added = redis_client.set(
+            f"{GALLERY_CARD_PREFIX}{prediction_id}", json.dumps(card), nx=True
+        )
+        if was_added:
+            redis_client.lpush(GALLERY_INDEX_KEY, prediction_id)
+            redis_client.ltrim(GALLERY_INDEX_KEY, 0, GALLERY_MAX_ITEMS - 1)
+            print(f"✅ Public gallery card saved: {card_id}")
+    except Exception as error:
+        print(f"⚠️ Public gallery card could not be saved: {error}")
 
 # SpotifyOAuth を動的生成（重要）
 def get_spotify_oauth():
@@ -85,7 +129,7 @@ def get_spotify_oauth():
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("index.html", gallery_cards=get_public_gallery())
 
 # ################# Spotify認証 #################
 @app.route("/login")
@@ -651,6 +695,8 @@ def get_result(prediction_id):
 
     base_url = request.host_url.rstrip("/")
     full_image_url = f"{base_url}/{output_path}"
+
+    save_public_card(prediction_id, full_image_url, ai_title, card_id)
 
     return jsonify({
         "status": "succeeded",

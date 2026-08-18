@@ -50,8 +50,24 @@
     }
     .art-card::before { position: absolute; inset: 8%; content: ""; border: 1px solid rgba(255,255,255,.36); border-radius: .8rem; }
     .art-card::after { position: absolute; width: 140%; height: 14%; top: 44%; left: -20%; content: ""; background: rgba(234, 255, 204, .2); transform: rotate(-35deg); filter: blur(12px); }
+    .featured-image { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
+    .art-card.has-card { background: #10261d; }
+    .art-card.has-card::after { z-index: 1; }
+    .art-card.has-card .card-label, .art-card.has-card .card-number { z-index: 2; text-shadow: 0 2px 13px #000; }
     .card-label { position: absolute; right: 12%; bottom: 10%; left: 12%; font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 4rem); font-style: italic; line-height: .85; }
     .card-number { position: absolute; top: 12%; left: 12%; font-size: .66rem; letter-spacing: .13em; }
+    .archive { padding: 3rem 0 1rem; }
+    .archive-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+    .archive h2 { margin: .35rem 0 0; font-size: clamp(2.2rem, 5vw, 4.2rem); letter-spacing: -.065em; }
+    .archive-note { max-width: 21rem; color: #91a59a; font-size: .8rem; line-height: 1.5; text-align: right; }
+    .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .gallery-card { overflow: hidden; color: inherit; border: 1px solid rgba(255,255,255,.14); border-radius: .8rem; background: rgba(255,255,255,.035); text-decoration: none; transition: transform .2s ease, border-color .2s ease; }
+    .gallery-card:hover { border-color: #b7ed78; transform: translateY(-4px); }
+    .gallery-card img { display: block; width: 100%; aspect-ratio: .72; background: #123325; object-fit: cover; }
+    .gallery-caption { display: flex; align-items: start; justify-content: space-between; gap: .75rem; padding: .8rem; }
+    .gallery-title { font-size: .85rem; font-weight: 650; line-height: 1.25; }
+    .gallery-date { color: #91a59a; font-size: .68rem; text-align: right; white-space: nowrap; }
+    .empty-archive { padding: 2rem; color: #91a59a; border: 1px dashed rgba(255,255,255,.16); border-radius: .8rem; font-size: .88rem; text-align: center; }
     .support { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,.13); }
     .support a { display: flex; min-height: 7.5rem; flex-direction: column; justify-content: space-between; padding: 1.25rem; color: inherit; text-decoration: none; border: 1px solid rgba(255,255,255,.14); border-radius: .8rem; background: rgba(255,255,255,.035); transition: transform .2s ease, border-color .2s ease, background .2s ease; }
     .support a:hover { border-color: #b7ed78; background: rgba(183,237,120,.09); transform: translateY(-3px); }
@@ -63,6 +79,9 @@
       .hero { grid-template-columns: 1fr; min-height: auto; padding: 5.5rem 0 4rem; }
       h1 { max-width: 8ch; }
       .art-card { width: min(100%, 25rem); }
+      .archive-head { align-items: start; flex-direction: column; }
+      .archive-note { text-align: left; }
+      .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .support { grid-template-columns: 1fr; }
     }
   </style>
@@ -79,10 +98,40 @@
         <h1 id="page-title">Music becomes creature.</h1>
         <p class="intro">A personal collection of images shaped by listening history, transformed into one-off monster cards.</p>
       </div>
-      <div class="art-card" aria-label="Music Monster artwork placeholder">
-        <span class="card-number">ARCHIVE / 001</span>
-        <span class="card-label">Sound<br>form</span>
+      <a class="art-card {% if gallery_cards %}has-card{% endif %}" href="#archive" aria-label="View the Music Monster archive">
+        {% if gallery_cards %}
+          <img class="featured-image" src="{{ gallery_cards[0].image_url }}" alt="{{ gallery_cards[0].title }}" />
+          <span class="card-number">{{ gallery_cards[0].card_id }}</span>
+          <span class="card-label">{{ gallery_cards[0].title }}</span>
+        {% else %}
+          <span class="card-number">ARCHIVE / 001</span>
+          <span class="card-label">Sound<br>form</span>
+        {% endif %}
+      </a>
+    </section>
+    <section class="archive" id="archive" aria-labelledby="archive-title">
+      <div class="archive-head">
+        <div>
+          <p class="eyebrow">Selected works</p>
+          <h2 id="archive-title">The archive.</h2>
+        </div>
+        <p class="archive-note">Each card is created from a moment in the artist's listening history.</p>
       </div>
+      {% if gallery_cards %}
+        <div class="gallery">
+          {% for card in gallery_cards %}
+            <a class="gallery-card" href="{{ card.image_url }}" target="_blank" rel="noopener noreferrer">
+              <img src="{{ card.image_url }}" alt="{{ card.title }}" loading="lazy" />
+              <span class="gallery-caption">
+                <span class="gallery-title">{{ card.title }}<br><small>{{ card.card_id }}</small></span>
+                <span class="gallery-date">{{ card.created_at }}</span>
+              </span>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-archive">The first cards from this listening archive are arriving soon.</p>
+      {% endif %}
     </section>
     <section class="support" aria-label="Support and feedback">
       <a href="https://buymeacoffee.com/seiyau" target="_blank" rel="noopener noreferrer">
