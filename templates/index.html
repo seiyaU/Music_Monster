@@ -34,6 +34,7 @@
     .about { display: grid; grid-template-columns: 1fr .8fr; gap: clamp(2rem, 7vw, 7rem); align-items: center; padding: clamp(4rem, 10vw, 9rem) 0; border-top: 1px solid rgba(255,255,255,.13); }
     .about h2 { max-width: 9ch; margin: .65rem 0 1.25rem; font-size: clamp(2.8rem, 7vw, 5.5rem); line-height: .84; letter-spacing: -.07em; }
     .intro { max-width: 32rem; color: #b8c5bd; font-size: 1.05rem; line-height: 1.65; }
+    .intro a { color: #b7ed78; text-decoration-color: rgba(183,237,120,.5); text-underline-offset: .18em; }
     .art-card { position: relative; aspect-ratio: .72; overflow: hidden; border: 1px solid rgba(218,245,196,.18); border-radius: 1.25rem; background: linear-gradient(148deg, #93d768 0%, #1b6249 42%, #0a2019 78%); box-shadow: 1.5rem 1.5rem 0 rgba(183,237,120,.08), 0 2rem 5rem rgba(0,0,0,.36); }
     .art-card::before { position: absolute; inset: 8%; content: ""; border: 1px solid rgba(255,255,255,.36); border-radius: .8rem; }
     .art-card::after { position: absolute; top: 44%; left: -20%; width: 140%; height: 14%; content: ""; background: rgba(234,255,204,.2); filter: blur(12px); transform: rotate(-35deg); }
@@ -73,7 +74,13 @@
       {% endif %}
     </section>
     <section class="about" aria-labelledby="about-title">
-      <div><p class="eyebrow">An ongoing art project</p><h2 id="about-title">Music becomes creature.</h2><p class="intro">A personal collection of images transformed into one-off monster cards, each created from a moment in the artist's listening history.</p></div>
+      <div>
+        <p class="eyebrow">An ongoing art project</p>
+        <h2 id="about-title">Music becomes creature.</h2>
+        <p class="intro">Music Monster is a living visual archive created by the artist behind <a href="https://www.instagram.com/seiya_experience/" target="_blank" rel="noopener noreferrer">@seiya_experience</a>. It transforms moments from their recent listening history into one-off monster cards.</p>
+        <p class="intro">Each card translates a particular constellation of songs into a creature — its mood, form, colour, and force.</p>
+        <p class="intro">Every image is connected to the playlist that inspired it. Open a card to step into the sounds behind the creature.</p>
+      </div>
       {% if gallery_cards %}
         <a class="art-card has-card" href="{{ gallery_cards[0].playlist_url or gallery_cards[0].image_url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ gallery_cards[0].title }} — open source playlist on Spotify"><img class="featured-image" src="{{ gallery_cards[0].image_url }}" alt="{{ gallery_cards[0].title }}" /></a>
       {% else %}
