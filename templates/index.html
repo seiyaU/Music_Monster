@@ -62,7 +62,7 @@
       {% if gallery_cards %}
         <div class="gallery">
           {% for card in gallery_cards %}
-            <a class="gallery-card" href="{{ card.image_url }}" target="_blank" rel="noopener noreferrer">
+            <a class="gallery-card" href="{{ card.playlist_url or card.image_url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ card.title }} — open source playlist on Spotify">
               <img src="{{ card.image_url }}" alt="{{ card.title }}" loading="lazy" />
               <span class="gallery-caption"><span class="gallery-title">{{ card.title }}<br><small>{{ card.card_id }}</small></span><span class="gallery-date">{{ card.created_at }}</span></span>
             </a>
@@ -74,9 +74,11 @@
     </section>
     <section class="about" aria-labelledby="about-title">
       <div><p class="eyebrow">An ongoing art project</p><h2 id="about-title">Music becomes creature.</h2><p class="intro">A personal collection of images transformed into one-off monster cards, each created from a moment in the artist's listening history.</p></div>
-      <div class="art-card {% if gallery_cards %}has-card{% endif %}">
-        {% if gallery_cards %}<img class="featured-image" src="{{ gallery_cards[0].image_url }}" alt="{{ gallery_cards[0].title }}" />{% else %}<span class="card-number">ARCHIVE / 001</span><span class="card-label">Sound<br>form</span>{% endif %}
-      </div>
+      {% if gallery_cards %}
+        <a class="art-card has-card" href="{{ gallery_cards[0].playlist_url or gallery_cards[0].image_url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ gallery_cards[0].title }} — open source playlist on Spotify"><img class="featured-image" src="{{ gallery_cards[0].image_url }}" alt="{{ gallery_cards[0].title }}" /></a>
+      {% else %}
+        <div class="art-card"><span class="card-number">ARCHIVE / 001</span><span class="card-label">Sound<br>form</span></div>
+      {% endif %}
     </section>
     <section class="support" aria-label="Support and feedback">
       <a href="https://buymeacoffee.com/seiyau" target="_blank" rel="noopener noreferrer"><span>Keep the project alive</span><strong>☕ Buy me a coffee</strong></a>

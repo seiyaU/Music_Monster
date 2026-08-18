@@ -75,6 +75,8 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 OWNER_SPOTIFY_ID = os.getenv("OWNER_SPOTIFY_ID")
 GALLERY_INDEX_KEY = "music_monster:gallery:index"
 GALLERY_CARD_PREFIX = "music_monster:gallery:card:"
+SOURCE_TRACKS_PREFIX = "music_monster:source_tracks:"
+SOURCE_PLAYLIST_PREFIX = "music_monster:source_playlist:"
 GALLERY_MAX_ITEMS = 6
 
 
@@ -97,14 +99,90 @@ def get_public_gallery(limit=GALLERY_MAX_ITEMS):
         return []
 
 
-def save_public_card(prediction_id, image_url, title, card_id):
+def remove_source_playlist(playlist_id):
+    """Remove an expired source playlist from the owner's Spotify library."""
+    access_token = session.get("access_token")
+    if not access_token or not playlist_id:
+        return
+    try:
+        response = requests.delete(
+            f"https://api.spotify.com/v1/playlists/{playlist_id}/followers",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=20,
+        )
+        response.raise_for_status()
+        print(f"🗑️ Expired Spotify playlist removed: {playlist_id}")
+    except requests.RequestException as error:
+        print(f"⚠️ Expired Spotify playlist could not be removed: {error}")
+
+
+def create_source_playlist(prediction_id, card_id):
+    """Create one public Spotify playlist from the exact tracks used for a card."""
+    try:
+        playlist_key = f"{SOURCE_PLAYLIST_PREFIX}{prediction_id}"
+        cached = redis_client.get(playlist_key)
+        if cached:
+            if isinstance(cached, bytes):
+                cached = cached.decode("utf-8")
+            return json.loads(cached)
+
+        source = redis_client.get(f"{SOURCE_TRACKS_PREFIX}{prediction_id}")
+        if not source:
+            return None
+        if isinstance(source, bytes):
+            source = source.decode("utf-8")
+        source = json.loads(source)
+        track_uris = source.get("track_uris", [])
+        access_token = session.get("access_token")
+        if source.get("user_id") != session.get("user_id") or not track_uris or not access_token:
+            return None
+
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+        playlist_response = requests.post(
+            "https://api.spotify.com/v1/me/playlists",
+            headers=headers,
+            json={
+                "name": f"Music Monster {card_id}",
+                "public": True,
+                "description": f"Source tracks for Music Monster card {card_id}.",
+            },
+            timeout=20,
+        )
+        playlist_response.raise_for_status()
+        playlist = playlist_response.json()
+        playlist_id = playlist["id"]
+
+        items_response = requests.post(
+            f"https://api.spotify.com/v1/playlists/{playlist_id}/items",
+            headers=headers,
+            json={"uris": track_uris[:100]},
+            timeout=20,
+        )
+        items_response.raise_for_status()
+        source_playlist = {
+            "playlist_id": playlist_id,
+            "playlist_url": playlist["external_urls"]["spotify"],
+        }
+        redis_client.set(playlist_key, json.dumps(source_playlist))
+        redis_client.delete(f"{SOURCE_TRACKS_PREFIX}{prediction_id}")
+        print(f"✅ Source Spotify playlist created: {playlist_id}")
+        return source_playlist
+    except (KeyError, ValueError, requests.RequestException) as error:
+        print(f"⚠️ Source Spotify playlist could not be created: {error}")
+        return None
+
+
+def save_public_card(prediction_id, image_url, title, card_id, owner_id, source_playlist=None):
     """Add a completed card to the public archive once, even if it is polled again."""
     card = {
         "prediction_id": prediction_id,
         "image_url": image_url,
         "title": title,
         "card_id": card_id,
+        "owner_id": owner_id,
         "created_at": datetime.now(timezone.utc).strftime("%d %b %Y"),
+        "playlist_id": (source_playlist or {}).get("playlist_id"),
+        "playlist_url": (source_playlist or {}).get("playlist_url"),
     }
     try:
         was_added = redis_client.set(
@@ -117,7 +195,13 @@ def save_public_card(prediction_id, image_url, title, card_id):
             for expired_id in expired_ids:
                 if isinstance(expired_id, bytes):
                     expired_id = expired_id.decode("utf-8")
+                expired_card = redis_client.get(f"{GALLERY_CARD_PREFIX}{expired_id}")
+                if expired_card:
+                    if isinstance(expired_card, bytes):
+                        expired_card = expired_card.decode("utf-8")
+                    remove_source_playlist(json.loads(expired_card).get("playlist_id"))
                 redis_client.delete(f"{GALLERY_CARD_PREFIX}{expired_id}")
+                redis_client.delete(f"{SOURCE_PLAYLIST_PREFIX}{expired_id}")
                 if re.fullmatch(r"[a-z0-9]+", expired_id):
                     expired_image_path = os.path.join(
                         "static", "generated", f"hologram_{expired_id}.png"
@@ -136,7 +220,7 @@ def get_spotify_oauth():
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played user-read-email"
+        scope="user-read-recently-played user-read-email playlist-modify-public"
     )
 
 @app.route("/")
@@ -232,6 +316,13 @@ def generate_image(user_id):
 
         if not recent.get("items"):
             return "No recent tracks found.", 404
+
+        source_track_uris = [
+            item.get("track", {}).get("uri") for item in recent["items"]
+            if item.get("track", {}).get("uri")
+        ]
+        if not source_track_uris:
+            return "No playable recent tracks found.", 404
         
         # ✅ Redis に保存（10分キャッシュ）
         redis_client.setex(cache_key, 1800, json.dumps(recent))
@@ -471,6 +562,12 @@ def generate_image(user_id):
 
         prediction = res.json()
 
+        redis_client.setex(
+            f"{SOURCE_TRACKS_PREFIX}{prediction['id']}",
+            60 * 60 * 24,
+            json.dumps({"user_id": user_id, "track_uris": source_track_uris}),
+        )
+
         # 🧠 creature_name をセッションに保存（後でタイトルに使う）
         session["creature_name"] = creature_name
         session["atk"] = atk
@@ -496,6 +593,17 @@ def generate_page(user_id):
 # =====================
 @app.route("/result/<prediction_id>", methods=["GET"])
 def get_result(prediction_id):
+
+    current_user = session.get("user_id")
+    if not current_user:
+        return jsonify({"status": "login_required"}), 401
+
+    source = redis_client.get(f"{SOURCE_TRACKS_PREFIX}{prediction_id}")
+    if source:
+        if isinstance(source, bytes):
+            source = source.decode("utf-8")
+        if json.loads(source).get("user_id") != current_user:
+            return jsonify({"status": "forbidden"}), 403
 
     headers = {"Authorization": f"Token {REPLICATE_API_TOKEN}"}
     res = requests.get(f"https://api.replicate.com/v1/predictions/{prediction_id}", headers=headers)
@@ -710,13 +818,17 @@ def get_result(prediction_id):
     base_url = request.host_url.rstrip("/")
     full_image_url = f"{base_url}/{output_path}"
 
-    save_public_card(prediction_id, full_image_url, ai_title, card_id)
+    source_playlist = create_source_playlist(prediction_id, card_id)
+    save_public_card(
+        prediction_id, full_image_url, ai_title, card_id, user_name, source_playlist
+    )
 
     return jsonify({
         "status": "succeeded",
         "image_url": full_image_url,
         "title": ai_title,
         "card_id": card_id,
+        "playlist_url": (source_playlist or {}).get("playlist_url"),
         "user": user_name
     })
 
