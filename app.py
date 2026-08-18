@@ -162,6 +162,7 @@ def create_source_playlist(prediction_id, card_id):
         source_playlist = {
             "playlist_id": playlist_id,
             "playlist_url": playlist["external_urls"]["spotify"],
+            "cover_uploaded": False,
         }
         redis_client.set(playlist_key, json.dumps(source_playlist))
         redis_client.delete(f"{SOURCE_TRACKS_PREFIX}{prediction_id}")
@@ -170,6 +171,71 @@ def create_source_playlist(prediction_id, card_id):
     except (KeyError, ValueError, requests.RequestException) as error:
         print(f"⚠️ Source Spotify playlist could not be created: {error}")
         return None
+
+
+def upload_playlist_cover(prediction_id, source_playlist, image_path):
+    """Upload a square, site-themed cover without scaling the generated card."""
+    if not source_playlist or source_playlist.get("cover_uploaded"):
+        return
+
+    access_token = session.get("access_token")
+    if not access_token:
+        return
+
+    try:
+        card_image = Image.open(image_path).convert("RGBA")
+        canvas_size = max(card_image.size)
+        cover = Image.new("RGBA", (canvas_size, canvas_size), (7, 17, 13, 255))
+
+        glow_layer = Image.new("RGBA", cover.size, (0, 0, 0, 0))
+        glow_draw = ImageDraw.Draw(glow_layer)
+        glow_draw.ellipse(
+            (-canvas_size * 0.7, -canvas_size * 0.7, canvas_size * 0.45, canvas_size * 0.45),
+            fill=(128, 207, 100, 74),
+        )
+        glow_draw.ellipse(
+            (canvas_size * 0.55, canvas_size * 0.6, canvas_size * 1.45, canvas_size * 1.5),
+            fill=(22, 77, 60, 115),
+        )
+        cover = Image.alpha_composite(
+            cover, glow_layer.filter(ImageFilter.GaussianBlur(canvas_size // 12))
+        )
+        card_position = (
+            (canvas_size - card_image.width) // 2,
+            (canvas_size - card_image.height) // 2,
+        )
+        cover.alpha_composite(card_image, card_position)
+
+        jpeg_data = None
+        for quality in (90, 82, 74, 66, 58, 50, 42, 34, 26, 18, 10):
+            buffer = BytesIO()
+            cover.convert("RGB").save(
+                buffer, format="JPEG", quality=quality, optimize=True, progressive=True
+            )
+            if buffer.tell() <= 256 * 1024:
+                jpeg_data = buffer.getvalue()
+                break
+        if not jpeg_data:
+            print("⚠️ Spotify playlist cover exceeded the 256 KB limit.")
+            return
+
+        response = requests.put(
+            f"https://api.spotify.com/v1/playlists/{source_playlist['playlist_id']}/images",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "image/jpeg",
+            },
+            data=base64.b64encode(jpeg_data),
+            timeout=30,
+        )
+        response.raise_for_status()
+        source_playlist["cover_uploaded"] = True
+        redis_client.set(
+            f"{SOURCE_PLAYLIST_PREFIX}{prediction_id}", json.dumps(source_playlist)
+        )
+        print(f"✅ Spotify playlist cover uploaded: {source_playlist['playlist_id']}")
+    except (KeyError, OSError, requests.RequestException) as error:
+        print(f"⚠️ Spotify playlist cover could not be uploaded: {error}")
 
 
 def save_public_card(prediction_id, image_url, title, card_id, owner_id, source_playlist=None):
@@ -220,7 +286,7 @@ def get_spotify_oauth():
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        scope="user-read-recently-played user-read-email playlist-modify-public"
+        scope="user-read-recently-played user-read-email playlist-modify-public ugc-image-upload"
     )
 
 @app.route("/")
@@ -819,6 +885,7 @@ def get_result(prediction_id):
     full_image_url = f"{base_url}/{output_path}"
 
     source_playlist = create_source_playlist(prediction_id, card_id)
+    upload_playlist_cover(prediction_id, source_playlist, output_path)
     save_public_card(
         prediction_id, full_image_url, ai_title, card_id, user_name, source_playlist
     )
