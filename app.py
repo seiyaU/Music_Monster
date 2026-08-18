@@ -71,6 +71,7 @@ CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIPY_REDIRECT_URI")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
+OWNER_SPOTIFY_ID = os.getenv("OWNER_SPOTIFY_ID")
 
 # SpotifyOAuth を動的生成（重要）
 def get_spotify_oauth():
@@ -84,7 +85,7 @@ def get_spotify_oauth():
 
 @app.route("/")
 def home():
-    return redirect("/login")
+    return render_template("index.html")
 
 # ################# Spotify認証 #################
 @app.route("/login")
@@ -105,6 +106,10 @@ def callback():
     sp = Spotify(auth=access_token)
     user = sp.me()
     user_id = user["id"]
+
+    if OWNER_SPOTIFY_ID and user_id != OWNER_SPOTIFY_ID:
+        session.clear()
+        return "This studio is private.", 403
 
     # ✅ Redis-backed session に保存
     session["user_id"] = user_id
