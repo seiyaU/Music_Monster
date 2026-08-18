@@ -1,7 +1,7 @@
 {
   "name": "music-monster",
   "version": "0.1.0",
-  "description": "A Python web application for music-inspired visual analysis.",
+  "description": "音楽関連のデータ分析・アプリケーション用Pythonプロジェクト",
   "main": "scripts/main.py",
   "author": "",
   "license": "MIT"

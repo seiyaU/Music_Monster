@@ -1,31 +1,393 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your Music Monster</title>
+  <meta charset="UTF-8" />
+  <title>Music Cat</title>
+  <link rel="icon" type="image/png" href="/static/icon.png" />
+  <link rel="apple-touch-icon" href="/static/icon.png" />
+  <meta name="theme-color" content="#459e5d" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 🔽 Google AdSenseで発行された広告コードをここに貼り付ける -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7980341501217442"
+    crossorigin="anonymous"></script>
   <style>
-    :root { color-scheme:dark; } * { box-sizing:border-box; } body { margin:0; min-height:100vh; display:grid; place-items:center; padding:28px 16px; color:#fbfaff; background:radial-gradient(circle at top,#342576,#111 58%); font-family:Inter,system-ui,sans-serif; }
-    main { width:min(680px,100%); text-align:center; } h1 { margin:0; font-size:clamp(2rem,8vw,3.5rem); } .card { margin-top:22px; padding:24px; border-radius:20px; background:#ffffff10; border:1px solid #ffffff22; }
-    .tags { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; } .tag { padding:7px 10px; border-radius:99px; background:#b7a4ff26; border:1px solid #b7a4ff66; } .score { color:#d4ccff; } button,a { display:inline-flex; justify-content:center; align-items:center; min-height:50px; padding:12px 18px; border:0; border-radius:10px; background:#b7a4ff; color:#180b48; font:700 1rem inherit; text-decoration:none; cursor:pointer; } button { width:100%; margin-top:20px; } button:disabled { opacity:.55; cursor:wait; } #status { min-height:1.5em; color:#d9d3eb; } img { display:none; width:min(100%,500px); border-radius:16px; margin:20px auto 0; box-shadow:0 18px 45px #0008; } #new-selection { display:none; margin-top:14px; background:#ffffff18; color:#fff; } .detail { color:#c8c1dd; font-size:.9rem; }
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;  /* ✅ 高さを最低100vhに変更 */
+      margin: 0;
+      background-color: #111;
+      color: white;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      background: #459e5d;
+      padding: 80px 0 40px; /* ✅ 上下にゆとりを持たせる */
+      box-sizing: border-box;
+    }
+    h2 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+    #status {
+      font-size: 1.0rem;
+      color: #ccc;
+      margin-bottom: 20px;
+    }
+    img {
+      display: none;
+      max-width: 90vw;  /* スマホでもはみ出さない */
+      max-height: 70vh;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+      object-fit: contain;
+      margin-bottom: 20px;
+    }
+    /* ✅ 共通のボタンスタイルを「.action-btn」として定義 */
+    .action-btn {
+      display: none; /* 生成後にJSで表示 */
+      background: #fff;
+      color: #222;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: 0.2s;
+      text-decoration: none; /* aタグでも下線を消す */
+      text-align: center;
+      font-size: 1rem;
+    }
+    .action-btn:hover {
+      background: #f0f0f0;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    /* ✅ 新規：最初の「Start」ボタン用 */
+    #start-btn {
+      display: inline-block;
+      background: #1DB954; /* Spotifyカラー */
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 22px;
+      font-size: 1.0rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    #start-btn:hover {
+      background: #1ed760;
+    }
+    .about-app {
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 20px 25px;
+    border-radius: 16px;
+    margin-top: 30px;
+    text-align: left;
+    line-height: 1.6;
+    font-size: 0.80rem;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+  .about-app h3 {
+    text-align: center;
+    color: #fff;
+    font-size: 1.0rem;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+  }
+  .about-app .quote {
+    font-style: italic;
+    color: #a0f0a0;
+    text-align: center;
+    margin: 15px 0;
+  }
+  .donate-link {
+    display: inline-block;
+    background: #ffdd57;
+    color: #222;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .message-link {
+    display: inline-block;
+    background: #ffffff;
+    color: #222;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .donate-link:hover {
+    background: #ffe47a;
+  }
+  .dev-note {
+    margin-top: 40px;
+    max-width: 600px;
+    padding: 15px 20px;
+    background: rgba(255,255,255,0.05);
+    border-left: 4px solid #1DB954;
+    border-radius: 12px;
+    text-align: left;
+    font-size: 0.7rem;
+  }
+  .dev-note1 h4 {
+    color: #db5909;
+    margin-bottom: 2px;
+  }
+  .dev-note2 h4 {
+    color: #dd28bc;
+    margin-bottom: 2px;
+  }
+  /* ✅ Instagramフッターリンク */
+    .insta-footer {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
+      border-radius: 50px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 1000;
+      transition: background 0.3s, transform 0.3s;
+    }
+    .insta-link:hover {
+      background: rgba(255,255,255,0.2);
+      transform: scale(1.05);
+    }
+    .insta-link img {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Your visual music profile</h1>
-    <section class="card">
-      <p class="detail">A creative AI interpretation of your nine life-defining albums</p>
-      <div class="tags">{% for genre in analysis.genres %}<span class="tag">{{ genre.name }} · {{ genre.confidence }}%</span>{% endfor %}</div>
-      {% if analysis.labels %}<p class="detail">{{ analysis.labels|join(' · ') }}</p>{% endif %}
-      <p class="score">Monster power: {{ analysis.score }}</p>
-      <button id="generate-button">Generate my monster</button>
-      <p id="status" role="status" aria-live="polite"></p>
-      <img id="output-image" alt="Your generated music monster card">
-      <a id="new-selection" href="/">Choose nine new albums</a>
-    </section>
-  </main>
+  <!-- ✅ 初期画面：Spotify連携スタート -->
+  <div id="start-screen">
+    <h2>Generate Music Cat</h2>
+    <p>Log in with Spotify<br>to start generating your cat!</p>
+    <button id="start-btn">Start with Spotify</button>
+
+    <div class="about-app">
+      <h3>About This App</h3>
+      <p>
+        The goal of this app is to provide <strong>original monster cards</strong> based on each user's music data.
+      </p>
+      <p class="quote">
+        “Listen to good music to get good monsters.”
+      </p>
+      <p>
+        Currently, it only uses my own Spotify history, even if you log in — so please enjoy it as a simple
+        <strong>Monster Card Generator</strong> for now.
+      </p>
+      <p>
+        Each card has a unique ID, and you’ll never see the same image twice.
+        <br>Collect them, trade them, and battle with your friends!
+      </p>
+      <p>
+        If you like this app, consider supporting it.
+        <a href="https://buymeacoffee.com/seiyau" target="_blank" class="donate-link">☕ Buy me a coffee</a>
+      </p>
+      <p>
+        <a href="https://www.instagram.com/seiya_experience/" target="_blank" class="message-link">Send me your opinion or idea</a>
+      </p>
+
+    </div>
+
+    <div class="dev-note1">
+      <h4>Help me Developers in the world</h4>
+      <p>
+        This app only belongs to my spotify history now. It's not completed.
+        It should give user experience depending on each user history.
+        But, I couldn't because, I'm not skillful developer.
+        So, give me your hands.
+      </p>
+    </div>
+    
+    <div class="dev-note2">
+      <h4>Note to Spotify Developer Team</h4>
+      <p>
+        I need to switch from Development mode under your permission.  
+        Please guide me through the process.
+      </p>
+    </div>
+    
+</div>
+
+  <!-- ✅ 生成画面（非表示スタート） -->
+  <div id="generation-screen" style="display:none; flex-direction:column; align-items:center;">
+    <h2>GENERATING...</h2>
+    <p id="status">Wait a minute...</p>
+    <img id="output-image"/>
+    <div class="buttons">
+      <!-- 保存ボタン -->
+      <button id="save-btn" class="action-btn">Save Image</button>
+      <a
+        href="https://buymeacoffee.com/seiyau"
+        target="_blank"
+        rel="noopener noreferrer"
+        id="sponsor-btn"
+        class="action-btn"
+      >
+        Buy Me a Coffee
+      </a>
+    </div>
+    <div class="buttons">
+      <!-- ✅ Instagramボタンを追加 -->
+      <a
+        href="https://www.instagram.com/seiya_experience/"
+        target="_blank"
+        rel="noopener noreferrer"
+        id="insta-btn"
+        class="action-btn"
+        style="background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af, #515bd4); color: white;"
+      >
+        Send me your opinion or idea
+      </a>
+    </div>
+    <div class="buttons">
+      <button id="back-btn" class="action-btn" style="background:#222; color:white;">
+        🔙 Back to Start
+      </button>
+    </div>
+    
+      
+    <!-- ✅ AdSense広告を表示する場所 -->
+    <div class="ad-area" style="margin-top: 20px; text-align: center;">
+      <!-- for web app -->
+      <ins class="adsbygoogle"
+          style="display:block"
+          data-ad-client="ca-pub-7980341501217442"
+          data-ad-slot="6674114393"
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
+      <script>
+          (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </div>
+
+  
+
   <script>
-    const button=document.getElementById('generate-button'), status=document.getElementById('status'), image=document.getElementById('output-image'), newSelection=document.getElementById('new-selection');
-    button.addEventListener('click', async () => { button.disabled=true; status.textContent='Creating your monster…'; try { const response=await fetch('/generate_api/{{ user_id }}',{method:'POST'}); const data=await response.json(); if(!response.ok) throw new Error(data.error || 'Generation failed.'); poll(data.status_url); } catch(error) { status.textContent=error.message || 'Generation failed. Please try again.'; button.disabled=false; } });
-    function poll(url) { setTimeout(async function check() { try { const response=await fetch(url); const data=await response.json(); if(data.status==='succeeded') { status.textContent='Your monster is ready.'; image.src=data.image_url; image.style.display='block'; newSelection.style.display='inline-flex'; } else if(data.status==='failed' || data.status==='canceled') { status.textContent='Generation failed. Please try again.'; button.disabled=false; } else { status.textContent='Creating your monster…'; setTimeout(check,2500); } } catch { status.textContent='Unable to check generation progress.'; button.disabled=false; } },2000); }
+    console.log("🟢 Page loaded");
+
+    // ✅ 「Start with Spotify」ボタン押下 → Spotifyログイン開始
+    document.getElementById("start-btn").addEventListener("click", async () => {
+      try {
+        // Flask側のセッション確認
+        const res = await fetch("/session-check");
+        const data = await res.json();
+        if (data.logged_in) {
+          console.log("🟢 User already logged in:", data.user_id);
+          startGeneration(data.user_id);
+        } else {
+          console.log("🟠 Redirecting to Spotify login...");
+          window.location.href = "/login";
+        }
+      } catch (err) {
+        console.error("❌ Session check failed:", err);
+        window.location.href = "/login";
+      }
+    });
+
+    // ✅ Flaskから呼び出される画像生成ロジック
+    async function startGeneration(userId) {
+      // 初期画面を非表示にして生成画面を表示
+      document.getElementById("start-screen").style.display = "none";
+      document.getElementById("generation-screen").style.display = "flex";
+
+      try {
+        const res = await fetch(`/generate_api/${userId}`);
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return; 
+        }
+
+        const data = await res.json();
+        if (!data.status_url) {
+          document.getElementById("status").textContent = "⚠️ Generation could not be started.";
+          console.error("🚨 Invalid response:", data);
+          return;
+        }
+
+        pollStatus(data.status_url);
+      } catch (e) {
+        document.getElementById("status").textContent = "❌ Failed to start generation.";
+        console.error("🚨 Error in startGeneration:", e);
+      }
+    }
+
+    async function pollStatus(url) {
+      const statusText = document.getElementById("status");
+      const imageEl = document.getElementById("output-image");
+      const saveBtn = document.getElementById("save-btn");
+      const sponsorBtn = document.getElementById("sponsor-btn");
+      const instaBtn = document.getElementById("insta-btn");
+      const backBtn = document.getElementById("back-btn");
+
+      async function check() {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "succeeded") {
+          statusText.textContent = "✅ Image generation completed!";
+          imageEl.src = data.image_url;
+          imageEl.style.display = "block";
+          [saveBtn, sponsorBtn, instaBtn, backBtn].forEach(btn => {
+            if (btn) btn.style.display = "inline-block";
+          });
+
+          saveBtn.onclick = () => {
+            const a = document.createElement("a");
+            a.href = data.image_url;
+            a.download = "generated_image.png";
+            a.click();
+          };
+        } else if (data.status === "failed") {
+          statusText.textContent = "❌ Generation failed.";
+        } else {
+          statusText.textContent = `⏳ Status: ${data.status}...`;
+          setTimeout(check, 3000);
+        }
+      }
+      check();
+    }
+
+    // ✅ 戻るボタンの動作
+    document.getElementById("back-btn").addEventListener("click", () => {
+    document.getElementById("generation-screen").style.display = "none";
+    document.getElementById("start-screen").style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" }); // スクロールを一番上に戻す
+    });
+
+    // ===============================
+    // ✅ Service Worker の登録処理
+    // ===============================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const reg = await navigator.serviceWorker.register('/serviceWorker.js');
+          console.log('🟢 Service Worker registered:', reg.scope);
+        } catch (err) {
+          console.warn('⚠️ Service Worker registration failed:', err);
+        }
+      });
+    } 
   </script>
 </body>
 </html>

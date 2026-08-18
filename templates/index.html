@@ -1,180 +1,45 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#6d4aff">
-  <title>Music Monster — Your Life in 9 Albums</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Monster</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1DB954" />
+  <script>
+    // ✅ PWA登録
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/serviceWorker.js").then(() => {
+        console.log("Service Worker registered!");
+      });
+    }
+  </script>
   <style>
-    :root { color-scheme: dark; } * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; font-family:Inter,system-ui,sans-serif; color:#f8f6ff; background:radial-gradient(circle at top,#342576,#111 58%); }
-    main { width:min(920px,calc(100% - 32px)); margin:auto; padding:52px 0 72px; }
-    h1 { font-size:clamp(2.5rem,9vw,4.4rem); line-height:.95; margin:0; } .lead { color:#d8d1fb; line-height:1.65; font-size:1.1rem; max-width:650px; }
-    .card { padding:24px; margin-top:26px; border:1px solid #ffffff22; background:#ffffff10; border-radius:20px; box-shadow:0 16px 50px #0004; }
-    h2 { margin:0 0 8px; } .hint { margin:0 0 20px; color:#c9c2df; line-height:1.55; }
-    .paste-area { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:start; margin:0 0 22px; padding:14px; border:1px solid #ffffff1d; border-radius:14px; background:#09071330; }
-    textarea, input { width:100%; min-height:48px; border:1px solid #ffffff35; border-radius:10px; background:#120f24; color:white; padding:10px 12px; font:inherit; }
-    textarea { min-height:88px; resize:vertical; } .paste-area button { width:auto; margin:0; padding:0 16px; }
-    .paste-help { grid-column:1 / -1; margin:0; color:#b9b1d0; font-size:.84rem; line-height:1.45; }
-    .progress { margin:0 0 12px; color:#d8d1fb; font-weight:700; }
-    .album-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-    .album { min-height:150px; padding:14px; border:1px solid #ffffff24; border-radius:14px; background:linear-gradient(145deg,#33256780,#120f24); }
-    .album-number { display:block; margin-bottom:12px; color:#b7a4ff; font-size:.8rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-    .album input { margin-top:8px; min-height:42px; font-size:.92rem; }
-    .remember { display:flex; gap:9px; align-items:flex-start; margin:18px 0 0; color:#d8d1fb; line-height:1.45; font-size:.92rem; }
-    .remember input { width:18px; min-height:auto; margin:2px 0 0; accent-color:#b7a4ff; }
-    button { width:100%; margin-top:16px; min-height:50px; border:0; border-radius:10px; background:#b7a4ff; color:#180b48; font:700 1rem inherit; cursor:pointer; }
-    button:disabled { opacity:.55; cursor:not-allowed; }
-    #status { min-height:1.5em; margin:14px 0 0; color:#ddd7ef; } .error { color:#ffb4ad !important; } .privacy { font-size:.85rem; color:#b9b1d0; line-height:1.55; margin-top:18px; }
-    .saved { margin-top:22px; padding-top:20px; border-top:1px solid #ffffff1d; } .saved-header { display:flex; gap:12px; justify-content:space-between; align-items:baseline; } .saved h3 { margin:0; font-size:1rem; } .text-button { width:auto; min-height:0; margin:0; padding:0; border:0; background:transparent; color:#d8d1fb; font:inherit; text-decoration:underline; }
-    .saved-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; } .saved-album { width:auto; min-height:0; margin:0; padding:8px 10px; border:1px solid #ffffff2d; background:#ffffff10; color:#fff; font-size:.86rem; font-weight:500; text-align:left; } .saved-album:hover,.saved-album:focus { background:#ffffff22; }
-    .empty-saved { margin:12px 0 0; color:#b9b1d0; font-size:.9rem; }
-    @media (max-width:700px) { .album-grid { grid-template-columns:repeat(2,1fr); } }
-    @media (max-width:520px) { main { width:min(100% - 24px,920px); padding-top:34px; } .card { padding:17px; } .album-grid { grid-template-columns:1fr; } .paste-area { grid-template-columns:1fr; } .paste-area button { width:100%; } }
+    body {
+      font-family: system-ui, sans-serif;
+      text-align: center;
+      background-color: #121212;
+      color: white;
+      margin: 0;
+      padding: 20px;
+    }
+    button {
+      background-color: #1DB954;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      padding: 15px 25px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #18a349;
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Music Monster</h1>
-    <p class="lead">Your life in 9 albums, transformed into one-of-a-kind monster art.</p>
-    <section class="card">
-      <h2>Choose your life in 9 albums</h2>
-      <p class="hint">Enter an album title and artist for each space. This is a creative interpretation of the music that has shaped you, not a factual genre report.</p>
-      <form id="taste-form">
-        <div class="paste-area">
-          <textarea id="paste-list" aria-label="Paste album list" placeholder="Optional: paste one album per line&#10;Album title — Artist name"></textarea>
-          <button id="fill-from-paste" type="button">Fill cards</button>
-          <p class="paste-help">You can copy a list from your notes or music app. Use one album per line with an em dash (—), hyphen (-), or “by” between the album and artist, then review the cards below.</p>
-        </div>
-        <p id="progress" class="progress" aria-live="polite">0 of 9 albums ready</p>
-        <div class="album-grid">
-          {% for number in range(1, 10) %}
-          <div class="album" data-album-row>
-            <span class="album-number">Album {{ number }}</span>
-            <input name="title" maxlength="120" required aria-label="Album {{ number }} title" placeholder="Album title">
-            <input name="artist" maxlength="120" required aria-label="Album {{ number }} artist" placeholder="Artist">
-          </div>
-          {% endfor %}
-        </div>
-        <label class="remember"><input id="remember-albums" type="checkbox"> <span>Remember these albums on this device for my next visit. They stay in this browser and can be cleared below.</span></label>
-        <button id="analyse-button" type="submit" disabled>Analyse my 9 albums</button>
-      </form>
-      <p id="status" role="status" aria-live="polite"></p>
-      <div class="saved" id="saved-section" hidden>
-        <div class="saved-header"><h3>Albums saved on this device</h3><button id="clear-saved" class="text-button" type="button">Clear saved albums</button></div>
-        <div id="saved-list" class="saved-list"></div>
-      </div>
-      <p class="privacy">Your album details are sent to the analysis model only when you choose to analyse. This app does not store submitted album names; it temporarily caches only the anonymous visual profile. Saved albums remain in your browser unless you clear them.</p>
-    </section>
-  </main>
-  <script>
-    const STORAGE_KEY = 'music-monster-saved-albums-v1';
-    const form = document.getElementById('taste-form');
-    const button = document.getElementById('analyse-button');
-    const status = document.getElementById('status');
-    const progress = document.getElementById('progress');
-    const remember = document.getElementById('remember-albums');
-    const rows = [...document.querySelectorAll('[data-album-row]')];
-
-    function albumsFromForm() {
-      return rows.map((row) => ({
-        title: row.querySelector('[name=title]').value.trim(),
-        artist: row.querySelector('[name=artist]').value.trim(),
-      }));
-    }
-    function validAlbums(albums) { return albums.filter((album) => typeof album.title === 'string' && typeof album.artist === 'string' && album.title.trim() && album.artist.trim()); }
-    function updateProgress() {
-      const ready = validAlbums(albumsFromForm()).length;
-      progress.textContent = `${ready} of 9 albums ready`;
-      button.disabled = ready !== 9;
-    }
-    function setAlbumAt(row, album) {
-      row.querySelector('[name=title]').value = album.title;
-      row.querySelector('[name=artist]').value = album.artist;
-    }
-    function readSavedAlbums() {
-      try {
-        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        return Array.isArray(parsed) ? validAlbums(parsed).map((album) => ({ title: album.title.trim().slice(0, 120), artist: album.artist.trim().slice(0, 120) })).slice(0, 45) : [];
-      } catch (error) { return []; }
-    }
-    function writeSavedAlbums(albums) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(albums.slice(0, 45)));
-    }
-    function escapeText(value) { const node = document.createElement('span'); node.textContent = value; return node.textContent; }
-    function renderSavedAlbums() {
-      const albums = readSavedAlbums();
-      const section = document.getElementById('saved-section');
-      const list = document.getElementById('saved-list');
-      section.hidden = albums.length === 0;
-      list.replaceChildren();
-      albums.forEach((album) => {
-        const choice = document.createElement('button');
-        choice.className = 'saved-album'; choice.type = 'button';
-        choice.textContent = `${escapeText(album.title)} — ${escapeText(album.artist)}`;
-        choice.addEventListener('click', () => {
-          const target = rows.find((row) => !row.querySelector('[name=title]').value.trim() || !row.querySelector('[name=artist]').value.trim());
-          if (target) { setAlbumAt(target, album); updateProgress(); }
-          else { status.classList.add('error'); status.textContent = 'All nine cards are filled. Clear a card before adding another album.'; }
-        });
-        list.append(choice);
-      });
-    }
-    function parsePastedAlbums(text) {
-      return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
-        const match = line.match(/^(.+?)\s+(?:—|–|-)\s+(.+)$/) || line.match(/^(.+?)\s+by\s+(.+)$/i);
-        return match ? { title: match[1].trim(), artist: match[2].trim() } : null;
-      }).filter(Boolean).slice(0, 9);
-    }
-    rows.forEach((row) => row.querySelectorAll('input').forEach((input) => input.addEventListener('input', () => {
-      status.classList.remove('error'); updateProgress();
-    })));
-    document.getElementById('fill-from-paste').addEventListener('click', () => {
-      const albums = parsePastedAlbums(document.getElementById('paste-list').value);
-      if (!albums.length) {
-        status.classList.add('error'); status.textContent = 'Use one album per line: Album title — Artist name.'; return;
-      }
-      albums.forEach((album, index) => setAlbumAt(rows[index], album));
-      status.classList.remove('error'); status.textContent = `${albums.length} album${albums.length === 1 ? '' : 's'} added. Please review the cards.`;
-      updateProgress();
-    });
-    document.getElementById('clear-saved').addEventListener('click', () => { localStorage.removeItem(STORAGE_KEY); renderSavedAlbums(); });
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const albums = albumsFromForm();
-      if (validAlbums(albums).length !== 9) { updateProgress(); return; }
-      if (remember.checked) {
-        const saved = readSavedAlbums();
-        const seen = new Set();
-        writeSavedAlbums([...albums, ...saved].filter((album) => {
-          const key = `${album.title}\u0000${album.artist}`.toLocaleLowerCase();
-          if (seen.has(key)) return false; seen.add(key); return true;
-        }));
-      }
-      button.disabled = true; status.classList.remove('error'); status.textContent = 'Preparing your music profile… This can take a few minutes the first time.';
-      try {
-        const response = await fetch('/analyze-taste', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({albums}) });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Analysis failed.');
-        if (data.generate_url) { window.location.assign(data.generate_url); return; }
-        await waitForAnalysis(data.status_url);
-      } catch (error) {
-        status.classList.add('error'); status.textContent = error.message || 'Analysis failed. Please try again.'; updateProgress();
-      }
-    });
-    async function waitForAnalysis(statusUrl) {
-      while (true) {
-        await new Promise((resolve) => setTimeout(resolve, 4000));
-        const response = await fetch(statusUrl, { cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Analysis failed.');
-        if (data.generate_url) { window.location.assign(data.generate_url); return; }
-        status.textContent = data.prediction_status === 'processing'
-          ? 'Creating your visual music profile…'
-          : 'Preparing your music profile… This can take a few minutes the first time.';
-      }
-    }
-    renderSavedAlbums(); updateProgress();
-  </script>
+  <h1>🎵 Music Monster</h1>
+  <p>Spotifyログインしてあなたの音楽キャラクターを作ろう！</p>
+  <button onclick="location.href='/login'">Spotifyでログイン</button>
 </body>
 </html>
