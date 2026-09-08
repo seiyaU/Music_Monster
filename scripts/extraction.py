@@ -1,3 +1,5 @@
+import os
+
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
@@ -5,7 +7,7 @@ def make_letter():
     # Spotify API 認証
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
         client_id="e79acc16b5884a6088adac46a61fc8f0",
-        client_secret="72dcf2a487e64c46ab32b543b015a46f",
+        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
         redirect_uri="https://music-cat-7r71.onrender.com",
         scope="user-read-recently-played"
     ))
